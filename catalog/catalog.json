@@ -1,0 +1,1628 @@
+{
+  "maps": [
+    {
+      "id": "mycale",
+      "path": "terrain\\tiles\\battle\\battlefields\\mycale"
+    },
+    {
+      "id": "marathon",
+      "path": "terrain\\tiles\\battle\\battlefields\\marathon"
+    },
+    {
+      "id": "thermopylae",
+      "path": "terrain\\tiles\\battle\\battlefields\\thermopylae"
+    },
+    {
+      "id": "salernum",
+      "path": "terrain\\tiles\\battle\\battlefields\\salernum"
+    },
+    {
+      "id": "gergovia",
+      "path": "terrain\\tiles\\battle\\battlefields\\gergovia"
+    },
+    {
+      "id": "germania",
+      "path": "terrain\\tiles\\battle\\battlefields\\germania"
+    },
+    {
+      "id": "teutoburg_forest",
+      "path": "terrain\\tiles\\battle\\battlefields\\teutoburg_forest"
+    },
+    {
+      "id": "alps",
+      "path": "terrain\\tiles\\battle\\battlefields\\alps"
+    },
+    {
+      "id": "capua",
+      "path": "terrain\\tiles\\battle\\battlefields\\capua"
+    },
+    {
+      "id": "capitoline_hill",
+      "path": "terrain\\tiles\\battle\\battlefields\\capitoline_hill"
+    },
+    {
+      "id": "hadrians_wall",
+      "path": "terrain\\tiles\\battle\\battlefields\\hadrians_wall"
+    },
+    {
+      "id": "rubicon",
+      "path": "terrain\\tiles\\battle\\battlefields\\rubicon"
+    },
+    {
+      "id": "vesuvius",
+      "path": "terrain\\tiles\\battle\\battlefields\\vesuvius"
+    },
+    {
+      "id": "oasis",
+      "path": "terrain\\tiles\\battle\\battlefields\\oasis"
+    },
+    {
+      "id": "changban",
+      "path": "terrain\\tiles\\battle\\battlefields\\changban"
+    },
+    {
+      "id": "passage_of_augustus",
+      "path": "terrain\\tiles\\battle\\battlefields\\passage_of_augustus"
+    }
+  ],
+  "commanders": [
+    {
+      "id": "bar_ambiorix",
+      "name": "Ambiorix"
+    },
+    {
+      "id": "bar_arminius",
+      "name": "Arminius"
+    },
+    {
+      "id": "bar_boudica",
+      "name": "Boudica"
+    },
+    {
+      "id": "bar_caratacus",
+      "name": "Caratacus"
+    },
+    {
+      "id": "bar_vercingetorix",
+      "name": "Vercingetorix"
+    },
+    {
+      "id": "car_hannibal",
+      "name": "Hannibal"
+    },
+    {
+      "id": "car_hasdrubal",
+      "name": "Hasdrubal"
+    },
+    {
+      "id": "chi_cao_cao",
+      "name": "Cao Cao"
+    },
+    {
+      "id": "chi_dong_zhuo",
+      "name": "Dong Zhuo"
+    },
+    {
+      "id": "chi_guan_yu",
+      "name": "Guan Yu"
+    },
+    {
+      "id": "chi_liu_bei",
+      "name": "Liu Bei"
+    },
+    {
+      "id": "chi_lu_bu",
+      "name": "Lü Bu"
+    },
+    {
+      "id": "chi_sun_ren",
+      "name": "Sun Ren"
+    },
+    {
+      "id": "chi_zhuge_liang",
+      "name": "Zhuge Liang"
+    },
+    {
+      "id": "gla_crixus",
+      "name": "Crixus"
+    },
+    {
+      "id": "gla_spartacus",
+      "name": "Spartacus"
+    },
+    {
+      "id": "gre_alexander",
+      "name": "Alexander the Great"
+    },
+    {
+      "id": "gre_cynane",
+      "name": "Cynane"
+    },
+    {
+      "id": "gre_epaminondas",
+      "name": "Epaminondas"
+    },
+    {
+      "id": "gre_eumenes",
+      "name": "Eumenes"
+    },
+    {
+      "id": "gre_leonidas",
+      "name": "Leonidas"
+    },
+    {
+      "id": "gre_miltiades",
+      "name": "Miltiades"
+    },
+    {
+      "id": "gre_pyrrhus",
+      "name": "Pyrrhus"
+    },
+    {
+      "id": "gre_seleucus",
+      "name": "Seleucos"
+    },
+    {
+      "id": "per_cyrus",
+      "name": "LordCmdrGuts"
+    },
+    {
+      "id": "per_xerxes",
+      "name": "Xerxes"
+    },
+    {
+      "id": "rom_augustus",
+      "name": "Augustus"
+    },
+    {
+      "id": "rom_caesar",
+      "name": "Caesar"
+    },
+    {
+      "id": "rom_germanicus",
+      "name": "Germanicus"
+    },
+    {
+      "id": "rom_marcus_aurelius",
+      "name": "Marcus Aurelius"
+    },
+    {
+      "id": "rom_marius",
+      "name": "Marius"
+    },
+    {
+      "id": "rom_scipio",
+      "name": "Scipio"
+    },
+    {
+      "id": "rom_sulla",
+      "name": "Sulla"
+    },
+    {
+      "id": "rom_trajan",
+      "name": "Trajan"
+    }
+  ],
+  "units": [
+    {
+      "id": "bar_ambushers",
+      "name": "Ambushers"
+    },
+    {
+      "id": "bar_andartas_swords",
+      "name": "Andartas Swords"
+    },
+    {
+      "id": "bar_archer_warband",
+      "name": "Archer Warband"
+    },
+    {
+      "id": "bar_archers_of_ullr",
+      "name": "Archers Of Ullr"
+    },
+    {
+      "id": "bar_blood_riders",
+      "name": "Blood Riders"
+    },
+    {
+      "id": "bar_brigands",
+      "name": "Brigands"
+    },
+    {
+      "id": "bar_broceliande_biters",
+      "name": "Brocéliande Biters"
+    },
+    {
+      "id": "bar_cernunnos_hunters",
+      "name": "Cernunnos Hunters"
+    },
+    {
+      "id": "bar_cherusci_warband",
+      "name": "Cherusci Warband"
+    },
+    {
+      "id": "bar_chosen_swordsmen",
+      "name": "Chosen Swordsmen"
+    },
+    {
+      "id": "bar_cimbri_archers",
+      "name": "Cimbri Archers"
+    },
+    {
+      "id": "bar_cleavers",
+      "name": "Cleavers"
+    },
+    {
+      "id": "bar_dacian_warriors",
+      "name": "Dacian Warriors"
+    },
+    {
+      "id": "bar_dacias_chosen",
+      "name": "Dacias Chosen"
+    },
+    {
+      "id": "bar_decebalus_guard",
+      "name": "Decebalus Guard"
+    },
+    {
+      "id": "bar_falxmen",
+      "name": "Falxmen"
+    },
+    {
+      "id": "bar_fenrirs_followers",
+      "name": "Fenrirs Followers"
+    },
+    {
+      "id": "bar_gungnir_chargers",
+      "name": "bar_gungnir_chargers"
+    },
+    {
+      "id": "bar_harbingers",
+      "name": "Harbingers"
+    },
+    {
+      "id": "bar_hound_handlers",
+      "name": "Hound Handlers"
+    },
+    {
+      "id": "bar_huntsmen",
+      "name": "Huntsmen"
+    },
+    {
+      "id": "bar_mounted_warband",
+      "name": "Mounted Warband"
+    },
+    {
+      "id": "bar_naked_warriors",
+      "name": "Naked Warriors"
+    },
+    {
+      "id": "bar_niflheim_riders",
+      "name": "Niflheim Riders"
+    },
+    {
+      "id": "bar_night_hunters",
+      "name": "Night Hunters"
+    },
+    {
+      "id": "bar_noble_horse",
+      "name": "Noble Horse"
+    },
+    {
+      "id": "bar_oathsworn",
+      "name": "Oathsworn"
+    },
+    {
+      "id": "bar_pre_bastarnae_falxmen",
+      "name": "Bastarnae Falxmen"
+    },
+    {
+      "id": "bar_pre_belgae_archers",
+      "name": "Belgae Archers"
+    },
+    {
+      "id": "bar_pre_belgae_skirmishers",
+      "name": "Belgae Skirmishers"
+    },
+    {
+      "id": "bar_pre_berserkers",
+      "name": "Berserkers"
+    },
+    {
+      "id": "bar_pre_bloodsworn",
+      "name": "Bloodsworn"
+    },
+    {
+      "id": "bar_pre_cantabrian_cavalry",
+      "name": "Cantabrian Cavalry"
+    },
+    {
+      "id": "bar_pre_celtic_slingers",
+      "name": "Celtic Slingers"
+    },
+    {
+      "id": "bar_pre_cimbri_spear_warriors",
+      "name": "Cimbri Spear Warriors"
+    },
+    {
+      "id": "bar_pre_druids",
+      "name": "Druids"
+    },
+    {
+      "id": "bar_pre_eburones_marksmen",
+      "name": "Eburones Marksmen"
+    },
+    {
+      "id": "bar_pre_getae_horsemen",
+      "name": "Getae Horsemen"
+    },
+    {
+      "id": "bar_pre_harii_painted_warriors",
+      "name": "Harii Painted Warriors"
+    },
+    {
+      "id": "bar_pre_head_hurlers",
+      "name": "Head Hurlers"
+    },
+    {
+      "id": "bar_pre_heavy_horse",
+      "name": "Heavy Horse"
+    },
+    {
+      "id": "bar_pre_iberian_royal_cavalry",
+      "name": "Iberian Royal Cavalry"
+    },
+    {
+      "id": "bar_pre_riders_of_taranis",
+      "name": "Riders of Taranis"
+    },
+    {
+      "id": "bar_pre_spear_brothers",
+      "name": "Spear Brothers"
+    },
+    {
+      "id": "bar_pre_youths",
+      "name": "Youths"
+    },
+    {
+      "id": "bar_proven_archers",
+      "name": "Proven Archers"
+    },
+    {
+      "id": "bar_proven_falxmen",
+      "name": "Proven Falxmen"
+    },
+    {
+      "id": "bar_proven_warriors",
+      "name": "Proven Warriors"
+    },
+    {
+      "id": "bar_raiders",
+      "name": "Raiders"
+    },
+    {
+      "id": "bar_riders",
+      "name": "Riders"
+    },
+    {
+      "id": "bar_scouts",
+      "name": "Scouts"
+    },
+    {
+      "id": "bar_seconded_strays",
+      "name": "Seconded Strays"
+    },
+    {
+      "id": "bar_tribesmen",
+      "name": "Tribesmen"
+    },
+    {
+      "id": "bar_warband",
+      "name": "Warband"
+    },
+    {
+      "id": "bar_warg_warriors",
+      "name": "Warg Warriors"
+    },
+    {
+      "id": "bar_warriors",
+      "name": "Warriors"
+    },
+    {
+      "id": "bar_wild_wolves",
+      "name": "Wild Wolves"
+    },
+    {
+      "id": "bar_wolf_walkers",
+      "name": "Wolf Walkers"
+    },
+    {
+      "id": "bar_woodsmen",
+      "name": "Woodsmen"
+    },
+    {
+      "id": "car_african_elephant",
+      "name": "African Elephant"
+    },
+    {
+      "id": "car_amazigh_tribesmen",
+      "name": "Amazigh Tribesmen"
+    },
+    {
+      "id": "car_armoured_elephant",
+      "name": "Armoured Elephant"
+    },
+    {
+      "id": "car_baal",
+      "name": "Baal"
+    },
+    {
+      "id": "car_band_of_carthage",
+      "name": "Band of Carthage"
+    },
+    {
+      "id": "car_boii_skirmishers",
+      "name": "Boii Skirmishers"
+    },
+    {
+      "id": "car_boii_spearmen",
+      "name": "Boii Spearmen"
+    },
+    {
+      "id": "car_caesai",
+      "name": "Caesai"
+    },
+    {
+      "id": "car_campaign_elites",
+      "name": "Campaign Elites"
+    },
+    {
+      "id": "car_carthaginian_cavalry",
+      "name": "Carthaginian Cavalry"
+    },
+    {
+      "id": "car_carthaginian_hoplites",
+      "name": "Carthaginian Hoplites"
+    },
+    {
+      "id": "car_elite_hippeis",
+      "name": "Elite Hippeis"
+    },
+    {
+      "id": "car_iberian_rebels",
+      "name": "Iberian Rebels"
+    },
+    {
+      "id": "car_iberian_skirmishers",
+      "name": "Iberian Skirmishers"
+    },
+    {
+      "id": "car_insubres_swordsmen",
+      "name": "Insubres Swordsmen"
+    },
+    {
+      "id": "car_libyan_hoplites",
+      "name": "Libyan Hoplites"
+    },
+    {
+      "id": "car_libyan_infantry",
+      "name": "Libyan Infantry"
+    },
+    {
+      "id": "car_libyan_recruits",
+      "name": "Libyan Recruits"
+    },
+    {
+      "id": "car_mercenary_hippeis",
+      "name": "Mercenary Hippeis"
+    },
+    {
+      "id": "car_mercenary_rabble",
+      "name": "Mercenary Rabble"
+    },
+    {
+      "id": "car_mercenary_spears",
+      "name": "Mercenary Spears"
+    },
+    {
+      "id": "car_numidian_cavalry",
+      "name": "Numidian Cavalry"
+    },
+    {
+      "id": "car_numidian_vanguard",
+      "name": "Numidian Vanguard"
+    },
+    {
+      "id": "car_phoenician_warriors",
+      "name": "Phoenician Warriors"
+    },
+    {
+      "id": "car_pre_balearic_slingers",
+      "name": "Balearic Slingers"
+    },
+    {
+      "id": "car_pre_carthaginian_marines",
+      "name": "Carthaginian Marines"
+    },
+    {
+      "id": "car_pre_gallic_cavalry",
+      "name": "Gallic Cavalry"
+    },
+    {
+      "id": "car_pre_greek_hoplites",
+      "name": "Greek Hoplites"
+    },
+    {
+      "id": "car_pre_hamilcars_veterans",
+      "name": "Hamilcar's Veterans"
+    },
+    {
+      "id": "car_pre_lusitanian_guerrillas",
+      "name": "Lusitanian Guerrillas"
+    },
+    {
+      "id": "car_pre_maharbals_cavalry",
+      "name": "Maharbal's Cavalry"
+    },
+    {
+      "id": "car_pre_melqart",
+      "name": "Melqart"
+    },
+    {
+      "id": "car_pre_mercenary_scutarii",
+      "name": "Mercenary Scutarii"
+    },
+    {
+      "id": "car_pre_nubian_archers",
+      "name": "Nubian Archers"
+    },
+    {
+      "id": "car_pre_panther_cavalry",
+      "name": "Panther Cavalry"
+    },
+    {
+      "id": "car_pre_surus",
+      "name": "Surus"
+    },
+    {
+      "id": "car_punic_hoplites",
+      "name": "Punic Hoplites"
+    },
+    {
+      "id": "car_punic_mercenaries",
+      "name": "Punic Mercenaries"
+    },
+    {
+      "id": "car_samnite_warriors",
+      "name": "Samnite Warriors"
+    },
+    {
+      "id": "car_tanit",
+      "name": "Tanit"
+    },
+    {
+      "id": "car_veterans_of_cannae",
+      "name": "Veterans of Cannae"
+    },
+    {
+      "id": "car_veterans_of_trebia",
+      "name": "Veterans of Trebia"
+    },
+    {
+      "id": "chi_armoured_repeating_crossbows",
+      "name": "Armoured Repeating Crossbows"
+    },
+    {
+      "id": "chi_black_mountain_ambushers",
+      "name": "Black Mountain Ambushers"
+    },
+    {
+      "id": "chi_black_mountain_outlaws",
+      "name": "Black Mountain Outlaws"
+    },
+    {
+      "id": "chi_cavalry_militia",
+      "name": "Cavalry Militia"
+    },
+    {
+      "id": "chi_central_guard",
+      "name": "Central Guard"
+    },
+    {
+      "id": "chi_conscript_cavalry",
+      "name": "Conscript Cavalry"
+    },
+    {
+      "id": "chi_conscript_infantry",
+      "name": "Conscript Infantry"
+    },
+    {
+      "id": "chi_crossbow_buqu",
+      "name": "Crossbow Buqu"
+    },
+    {
+      "id": "chi_crossbow_militia",
+      "name": "Crossbow Militia"
+    },
+    {
+      "id": "chi_feathered_forest",
+      "name": "Feathered Forest"
+    },
+    {
+      "id": "chi_heavy_shu_crossbows",
+      "name": "Heavy Shu Crossbows"
+    },
+    {
+      "id": "chi_heavy_xiliang_cavalry",
+      "name": "Heavy Xiliang Cavalry"
+    },
+    {
+      "id": "chi_ji_buqu",
+      "name": "Ji Buqu"
+    },
+    {
+      "id": "chi_ji_guard",
+      "name": "Ji Guard"
+    },
+    {
+      "id": "chi_ji_mercenaries",
+      "name": "Ji Mercenaries"
+    },
+    {
+      "id": "chi_ji_warriors",
+      "name": "Ji Warriors"
+    },
+    {
+      "id": "chi_mercenary_repeating_crossbows",
+      "name": "Mercenary Repeating Crossbows"
+    },
+    {
+      "id": "chi_mercenary_swordsmen",
+      "name": "Mercenary Swordsmen"
+    },
+    {
+      "id": "chi_mounted_buqu",
+      "name": "Mounted Buqu"
+    },
+    {
+      "id": "chi_nomad_levy",
+      "name": "Nomad Levy"
+    },
+    {
+      "id": "chi_peasant_rabble",
+      "name": "Peasant Rabble"
+    },
+    {
+      "id": "chi_picked_cavalry",
+      "name": "Picked Cavalry"
+    },
+    {
+      "id": "chi_polearm_buqu",
+      "name": "Polearm Buqu"
+    },
+    {
+      "id": "chi_pre_ancient_elephant",
+      "name": "Ancient Elephant"
+    },
+    {
+      "id": "chi_pre_beastmen",
+      "name": "Beastmen"
+    },
+    {
+      "id": "chi_pre_feng_elephant",
+      "name": "Feng Elephant"
+    },
+    {
+      "id": "chi_pre_handmaiden_guard",
+      "name": "Handmaiden Guard"
+    },
+    {
+      "id": "chi_pre_palace_guard",
+      "name": "Palace Guard"
+    },
+    {
+      "id": "chi_pre_pearl_dragons",
+      "name": "Pearl Dragons"
+    },
+    {
+      "id": "chi_pre_protectors_of_heaven",
+      "name": "Protectors of Heaven"
+    },
+    {
+      "id": "chi_pre_qin_crossbows",
+      "name": "Qin Crossbows"
+    },
+    {
+      "id": "chi_pre_shesheng_crossbows",
+      "name": "Shesheng Crossbows"
+    },
+    {
+      "id": "chi_pre_tamed_tigers",
+      "name": "Tamed Tigers"
+    },
+    {
+      "id": "chi_pre_the_lost_legion",
+      "name": "The Lost Legion"
+    },
+    {
+      "id": "chi_pre_white_horse_fellows",
+      "name": "White Horse Fellows"
+    },
+    {
+      "id": "chi_pre_wu_marines",
+      "name": "Wu Marines"
+    },
+    {
+      "id": "chi_pre_youxia",
+      "name": "Youxia"
+    },
+    {
+      "id": "chi_pre_zhuge_crossbows",
+      "name": "Zhuge Crossbows"
+    },
+    {
+      "id": "chi_qingzhou_infantry",
+      "name": "Qingzhou Infantry"
+    },
+    {
+      "id": "chi_rapid_tiger_swords",
+      "name": "Rapid Tiger Swords"
+    },
+    {
+      "id": "chi_repeating_crossbow_guard",
+      "name": "Repeating Crossbow Guard"
+    },
+    {
+      "id": "chi_repeating_crossbows",
+      "name": "Repeating Crossbows"
+    },
+    {
+      "id": "chi_shesheng_repeating_crossbows",
+      "name": "Shesheng Repeating Crossbows"
+    },
+    {
+      "id": "chi_shu_crossbows",
+      "name": "Shu Crossbows"
+    },
+    {
+      "id": "chi_shu_light_cavalry",
+      "name": "Shu Light Cavalry"
+    },
+    {
+      "id": "chi_sword_buqu",
+      "name": "Sword Buqu"
+    },
+    {
+      "id": "chi_sword_guard",
+      "name": "Sword Guard"
+    },
+    {
+      "id": "chi_sword_militia",
+      "name": "Sword Militia"
+    },
+    {
+      "id": "chi_tiger_and_leopard_cavalry",
+      "name": "Tiger and Leopard Cavalry"
+    },
+    {
+      "id": "chi_tuntian_colonists",
+      "name": "Tuntian Colonists"
+    },
+    {
+      "id": "chi_tuntian_crossbows",
+      "name": "Tuntian Crossbows"
+    },
+    {
+      "id": "chi_wei_heavy_infantry",
+      "name": "Wei Heavy Infantry"
+    },
+    {
+      "id": "chi_white_feathers",
+      "name": "White Feathers"
+    },
+    {
+      "id": "chi_wu_assault_infantry",
+      "name": "Wu Assault Infantry"
+    },
+    {
+      "id": "chi_wu_marksmen",
+      "name": "Wu Marksmen"
+    },
+    {
+      "id": "chi_xiliang_cavalry",
+      "name": "Xiliang Cavalry"
+    },
+    {
+      "id": "chi_xiongnu_mercenaries",
+      "name": "Xiongnu Mercenaries"
+    },
+    {
+      "id": "chi_yellow_turbans",
+      "name": "Yellow Turbans"
+    },
+    {
+      "id": "gla_arbelai",
+      "name": "Arbelai"
+    },
+    {
+      "id": "gla_bestiarii",
+      "name": "Bestiarii"
+    },
+    {
+      "id": "gla_bustuarii",
+      "name": "Bustuarii"
+    },
+    {
+      "id": "gla_cilician_pirates",
+      "name": "Cilician Pirates"
+    },
+    {
+      "id": "gla_collegium_enforcers",
+      "name": "Collegium Enforcers"
+    },
+    {
+      "id": "gla_damnati",
+      "name": "Damnati"
+    },
+    {
+      "id": "gla_dimachaeri",
+      "name": "Dimachaeri"
+    },
+    {
+      "id": "gla_escaped_gladiators",
+      "name": "Escaped Gladiators"
+    },
+    {
+      "id": "gla_freedom_fighters",
+      "name": "Freedom-Fighters"
+    },
+    {
+      "id": "gla_fugitives",
+      "name": "Fugitives"
+    },
+    {
+      "id": "gla_herdsmen",
+      "name": "Herdsmen"
+    },
+    {
+      "id": "gla_hoplomaches",
+      "name": "Hoplomaches"
+    },
+    {
+      "id": "gla_lucanian_highwaymen",
+      "name": "Lucanian Highwaymen"
+    },
+    {
+      "id": "gla_mine_slaves",
+      "name": "Mine Slaves"
+    },
+    {
+      "id": "gla_murmillones",
+      "name": "Murmillones"
+    },
+    {
+      "id": "gla_plebeian_rabble",
+      "name": "Plebeian Rabble"
+    },
+    {
+      "id": "gla_pre_animal_trappers",
+      "name": "Animal Trappers"
+    },
+    {
+      "id": "gla_pre_auctorati",
+      "name": "Auctorati"
+    },
+    {
+      "id": "gla_pre_beast_handlers",
+      "name": "Beast Handlers"
+    },
+    {
+      "id": "gla_pre_caestus",
+      "name": "Caestus"
+    },
+    {
+      "id": "gla_pre_crupelarii",
+      "name": "Crupelarii"
+    },
+    {
+      "id": "gla_pre_dacian_gladiators",
+      "name": "Dacian Gladiators"
+    },
+    {
+      "id": "gla_pre_galli",
+      "name": "Galli"
+    },
+    {
+      "id": "gla_pre_gladiator_lancers",
+      "name": "Gladiator Lancers"
+    },
+    {
+      "id": "gla_pre_gladiatrices",
+      "name": "Gladiatrices"
+    },
+    {
+      "id": "gla_pre_liberated_elephant",
+      "name": "Liberated Elephant"
+    },
+    {
+      "id": "gla_pre_noxii",
+      "name": "Noxii"
+    },
+    {
+      "id": "gla_pre_retiarii_gladiatrices",
+      "name": "Retiarii Gladiatrices"
+    },
+    {
+      "id": "gla_pre_rudiarii_scissores",
+      "name": "Rudiarii Scissores"
+    },
+    {
+      "id": "gla_pre_slave_legionaries",
+      "name": "Slave Legionaries"
+    },
+    {
+      "id": "gla_pre_thracian_horsemasters",
+      "name": "Thracian Horsemasters"
+    },
+    {
+      "id": "gla_pre_trainee_scutarii",
+      "name": "Trainee Scutarii"
+    },
+    {
+      "id": "gla_provocatores",
+      "name": "Provocatores"
+    },
+    {
+      "id": "gla_rebel_fighters",
+      "name": "Rebel Fighters"
+    },
+    {
+      "id": "gla_retiarii",
+      "name": "Retiarii"
+    },
+    {
+      "id": "gla_rudiarii_hoplomaches",
+      "name": "Rudiarii Hoplomaches"
+    },
+    {
+      "id": "gla_rudiarii_murmillones",
+      "name": "Rudiarii Murmillones"
+    },
+    {
+      "id": "gla_rudiarii_retiarii",
+      "name": "Rudiarii Retiarii"
+    },
+    {
+      "id": "gla_samnites",
+      "name": "Samnites"
+    },
+    {
+      "id": "gla_scissores",
+      "name": "Scissores"
+    },
+    {
+      "id": "gla_secutores",
+      "name": "Secutores"
+    },
+    {
+      "id": "gla_shepherds",
+      "name": "Shepherds"
+    },
+    {
+      "id": "gla_thraeces",
+      "name": "Thraeces"
+    },
+    {
+      "id": "gla_venatores",
+      "name": "Venatores"
+    },
+    {
+      "id": "gla_veteran_rebels",
+      "name": "Veteran Rebels"
+    },
+    {
+      "id": "gre_agema_cavalry",
+      "name": "Agema Cavalry"
+    },
+    {
+      "id": "gre_agema_spears",
+      "name": "Agema Spears"
+    },
+    {
+      "id": "gre_archaic_archers",
+      "name": "Archaic Archers"
+    },
+    {
+      "id": "gre_archaic_hoplites",
+      "name": "Archaic Hoplites"
+    },
+    {
+      "id": "gre_athenian_hoplites",
+      "name": "Athenian Hoplites"
+    },
+    {
+      "id": "gre_athenian_pikemen",
+      "name": "gre_athenian_pikemen"
+    },
+    {
+      "id": "gre_cimmerian_heavy_archers",
+      "name": "Cimmerian Heavy Archers"
+    },
+    {
+      "id": "gre_citizen_cavalry",
+      "name": "Citizen Cavalry"
+    },
+    {
+      "id": "gre_companion_cavalry",
+      "name": "Companion Cavalry"
+    },
+    {
+      "id": "gre_cretan_archers",
+      "name": "Cretan Archers"
+    },
+    {
+      "id": "gre_cycladic_archers",
+      "name": "Cycladic Archers"
+    },
+    {
+      "id": "gre_elite_companions",
+      "name": "Elite Companions"
+    },
+    {
+      "id": "gre_foot_companions",
+      "name": "gre_foot_companions"
+    },
+    {
+      "id": "gre_gymnitai",
+      "name": "Gymnitai"
+    },
+    {
+      "id": "gre_hellenic_cataphracts",
+      "name": "Hellenic Cataphracts"
+    },
+    {
+      "id": "gre_hellenic_pikemen",
+      "name": "Hellenic Pikemen"
+    },
+    {
+      "id": "gre_helot_slingers",
+      "name": "Helot Slingers"
+    },
+    {
+      "id": "gre_hypaspists",
+      "name": "Hypaspists"
+    },
+    {
+      "id": "gre_ionian_archers",
+      "name": "Ionian Archers"
+    },
+    {
+      "id": "gre_lesbos_archers",
+      "name": "gre_lesbos_archers"
+    },
+    {
+      "id": "gre_levy_pikemen",
+      "name": "Levy Pikemen"
+    },
+    {
+      "id": "gre_levy_slingers",
+      "name": "gre_levy_slingers"
+    },
+    {
+      "id": "gre_macedonian_hoplites",
+      "name": "Macedonian Hoplites"
+    },
+    {
+      "id": "gre_macedonian_pikemen",
+      "name": "Macedonian Pikemen"
+    },
+    {
+      "id": "gre_mycenaean_archers",
+      "name": "Mycenaean Archers"
+    },
+    {
+      "id": "gre_mycenaean_hoplites",
+      "name": "Mycenaean Hoplites"
+    },
+    {
+      "id": "gre_olympic_slingers",
+      "name": "Olympic Slingers"
+    },
+    {
+      "id": "gre_pontic_archers",
+      "name": "Pontic Archers"
+    },
+    {
+      "id": "gre_pre_amazon_warriors",
+      "name": "Amazon Warriors"
+    },
+    {
+      "id": "gre_pre_attendant_archers",
+      "name": "Attendant Archers"
+    },
+    {
+      "id": "gre_pre_dahae_archers",
+      "name": "Dahae Archers"
+    },
+    {
+      "id": "gre_pre_delian_peltasts",
+      "name": "Delian Peltasts"
+    },
+    {
+      "id": "gre_pre_elite_ballista",
+      "name": "Elite Ballista"
+    },
+    {
+      "id": "gre_pre_engineers",
+      "name": "Engineers"
+    },
+    {
+      "id": "gre_pre_machimoi_archers",
+      "name": "Machimoi Archers"
+    },
+    {
+      "id": "gre_pre_myrmidons",
+      "name": "Myrmidons"
+    },
+    {
+      "id": "gre_pre_prodromoi",
+      "name": "Prodromoi"
+    },
+    {
+      "id": "gre_pre_spartan_hoplites",
+      "name": "Spartan Hoplites"
+    },
+    {
+      "id": "gre_pre_telesillas_argives",
+      "name": "Telesillas Argives"
+    },
+    {
+      "id": "gre_pre_thorax_spearmen",
+      "name": "Thorax Spearmen"
+    },
+    {
+      "id": "gre_pre_thracian_peltasts",
+      "name": "Thracian Peltasts"
+    },
+    {
+      "id": "gre_pre_thracian_royal_cavalry",
+      "name": "Thracian Royal Cavalry"
+    },
+    {
+      "id": "gre_pre_thureos_spearmen",
+      "name": "Thureos Spearmen"
+    },
+    {
+      "id": "gre_pre_thureos_swordsmen",
+      "name": "Thureos Swordsmen"
+    },
+    {
+      "id": "gre_psiloi",
+      "name": "Psiloi"
+    },
+    {
+      "id": "gre_rhodian_slingers",
+      "name": "Rhodian Slingers"
+    },
+    {
+      "id": "gre_royal_cavalry",
+      "name": "Royal Cavalry"
+    },
+    {
+      "id": "gre_royal_peltasts",
+      "name": "Royal Peltasts"
+    },
+    {
+      "id": "gre_royal_spartans",
+      "name": "Royal Spartans"
+    },
+    {
+      "id": "gre_sacred_band",
+      "name": "Sacred Band"
+    },
+    {
+      "id": "gre_scythian_archers",
+      "name": "Scythian Archers"
+    },
+    {
+      "id": "gre_silver_shield_pikemen",
+      "name": "Silver Shield Pikemen"
+    },
+    {
+      "id": "gre_silver_shield_swordsmen",
+      "name": "Silver Shield Swordsmen"
+    },
+    {
+      "id": "gre_somatophylakes",
+      "name": "Somatophylakes"
+    },
+    {
+      "id": "gre_theban_cavalry",
+      "name": "Theban Cavalry"
+    },
+    {
+      "id": "gre_theban_hoplites",
+      "name": "Theban Hoplites"
+    },
+    {
+      "id": "gre_theban_pikemen",
+      "name": "Theban Pikemen"
+    },
+    {
+      "id": "gre_thorax_pikemen",
+      "name": "Thorax Pikemen"
+    },
+    {
+      "id": "gre_thureophoroi",
+      "name": "Thureophoroi"
+    },
+    {
+      "id": "gre_toxotai",
+      "name": "Toxotai"
+    },
+    {
+      "id": "per_armoured_camel_warriors",
+      "name": "Armoured Camel Warriors"
+    },
+    {
+      "id": "per_azat_guard",
+      "name": "Azat Guard"
+    },
+    {
+      "id": "per_baggage_camels",
+      "name": "Baggage Camels"
+    },
+    {
+      "id": "per_camel_cataphracts",
+      "name": "Camel Cataphracts"
+    },
+    {
+      "id": "per_camel_clibanarii",
+      "name": "Camel Clibanarii"
+    },
+    {
+      "id": "per_camel_lancers",
+      "name": "Camel Lancers"
+    },
+    {
+      "id": "per_camel_warriors",
+      "name": "Camel Warriors"
+    },
+    {
+      "id": "per_grivpanvar_cataphracts",
+      "name": "Grivpanvar Cataphracts"
+    },
+    {
+      "id": "per_honoured_immortals",
+      "name": "Honoured Immortals"
+    },
+    {
+      "id": "per_immortals",
+      "name": "Immortals"
+    },
+    {
+      "id": "per_maraphii_sparabara",
+      "name": "Maraphii Sparabara"
+    },
+    {
+      "id": "per_paighan_band",
+      "name": "Paighan Band"
+    },
+    {
+      "id": "per_parthian_cataphracts",
+      "name": "Parthian Cataphracts"
+    },
+    {
+      "id": "per_parthian_mercenaries",
+      "name": "Parthian Mercenaries"
+    },
+    {
+      "id": "per_pasargadae_guard",
+      "name": "Pasargadae Guard"
+    },
+    {
+      "id": "per_persian_camel_raiders",
+      "name": "per_persian_camel_raiders"
+    },
+    {
+      "id": "per_persian_levy",
+      "name": "Persian Levy"
+    },
+    {
+      "id": "per_pre_arabian_camelry",
+      "name": "Arabian Camelry"
+    },
+    {
+      "id": "per_pre_conquerors_of_babylon",
+      "name": "Conquerors of Babylon"
+    },
+    {
+      "id": "per_pre_gyan_avspar",
+      "name": "Gyan-Avspar"
+    },
+    {
+      "id": "per_pre_naft_throwers",
+      "name": "Naft Throwers"
+    },
+    {
+      "id": "per_pre_nisean_chargers",
+      "name": "Nisean Chargers"
+    },
+    {
+      "id": "per_pre_royal_persian_archers",
+      "name": "Royal Persian Archers"
+    },
+    {
+      "id": "per_pre_takabara",
+      "name": "Takabara"
+    },
+    {
+      "id": "per_pushtighban_cataphracts",
+      "name": "Pushtighban Cataphracts"
+    },
+    {
+      "id": "per_savaran_cataphracts",
+      "name": "Savaran Cataphracts"
+    },
+    {
+      "id": "per_sogdian_camel_raiders",
+      "name": "Sogdian Camel Raiders"
+    },
+    {
+      "id": "per_sparabara",
+      "name": "Sparabara"
+    },
+    {
+      "id": "per_veteran_sparabara",
+      "name": "Veteran Sparabara"
+    },
+    {
+      "id": "per_zhayedan_immortal_cataphracts",
+      "name": "Zhayedan Immortal Cataphracts"
+    },
+    {
+      "id": "rom_accensi",
+      "name": "Accensi"
+    },
+    {
+      "id": "rom_arcani",
+      "name": "Arcani"
+    },
+    {
+      "id": "rom_architecti",
+      "name": "Architecti"
+    },
+    {
+      "id": "rom_armoured_legionaries",
+      "name": "Armoured Legionaries"
+    },
+    {
+      "id": "rom_augustan_skirmishers",
+      "name": "Augustan Skirmishers"
+    },
+    {
+      "id": "rom_ballista",
+      "name": "Heavy Ballista"
+    },
+    {
+      "id": "rom_catapult",
+      "name": "Catapult"
+    },
+    {
+      "id": "rom_catapult_archetype_defunct",
+      "name": "Catapult Archetype"
+    },
+    {
+      "id": "rom_celeres",
+      "name": "Celeres"
+    },
+    {
+      "id": "rom_centurion",
+      "name": "Centurion"
+    },
+    {
+      "id": "rom_cheiroballistra",
+      "name": "Cheiroballistra"
+    },
+    {
+      "id": "rom_eagle_cohort",
+      "name": "Eagle Cohort"
+    },
+    {
+      "id": "rom_elite_velites",
+      "name": "Elite Velites"
+    },
+    {
+      "id": "rom_equites",
+      "name": "rom_equites"
+    },
+    {
+      "id": "rom_evocati_cohort",
+      "name": "Evocati Cohort"
+    },
+    {
+      "id": "rom_hastati",
+      "name": "Hastati"
+    },
+    {
+      "id": "rom_heavy_catapult",
+      "name": "Heavy Catapult"
+    },
+    {
+      "id": "rom_heavy_onager",
+      "name": "Heavy Onager"
+    },
+    {
+      "id": "rom_imperial_guard",
+      "name": "Imperial Guard"
+    },
+    {
+      "id": "rom_imperial_velites",
+      "name": "Imperial Velites"
+    },
+    {
+      "id": "rom_italian_noble_cavalry",
+      "name": "Italian Noble Cavalry"
+    },
+    {
+      "id": "rom_legatus",
+      "name": "Legatus"
+    },
+    {
+      "id": "rom_legionaries",
+      "name": "rom_legionaries"
+    },
+    {
+      "id": "rom_legionary_cavalry",
+      "name": "Legionary Cavalry"
+    },
+    {
+      "id": "rom_leves",
+      "name": "Leves"
+    },
+    {
+      "id": "rom_light_ballista",
+      "name": "Ballista"
+    },
+    {
+      "id": "rom_milites",
+      "name": "Milites"
+    },
+    {
+      "id": "rom_onager",
+      "name": "Onager"
+    },
+    {
+      "id": "rom_palatini",
+      "name": "Palatini"
+    },
+    {
+      "id": "rom_pedites",
+      "name": "Pedites"
+    },
+    {
+      "id": "rom_praetorian_cavalry",
+      "name": "Praetorian Cavalry"
+    },
+    {
+      "id": "rom_praetorians",
+      "name": "Praetorians"
+    },
+    {
+      "id": "rom_pre_auxilia_palatina",
+      "name": "Auxilia Palatina"
+    },
+    {
+      "id": "rom_pre_auxiliary_cavalry",
+      "name": "Auxiliary Cavalry"
+    },
+    {
+      "id": "rom_pre_auxiliary_sagittari",
+      "name": "Auxiliary Sagittari"
+    },
+    {
+      "id": "rom_pre_germanic_scouts",
+      "name": "Germanic Scouts"
+    },
+    {
+      "id": "rom_pre_ghosts_of_cannae",
+      "name": "Ghosts of Cannae"
+    },
+    {
+      "id": "rom_pre_imperator_gladiators",
+      "name": "Imperator Gladiators"
+    },
+    {
+      "id": "rom_pre_legio_ix_hispana",
+      "name": "Legio IX Hispana"
+    },
+    {
+      "id": "rom_pre_martiobarbuli",
+      "name": "Martiobarbuli"
+    },
+    {
+      "id": "rom_pre_masinissas_guard",
+      "name": "Masinissa's Guard"
+    },
+    {
+      "id": "rom_pre_murmillo_gladiators",
+      "name": "Murmillo Gladiators"
+    },
+    {
+      "id": "rom_pre_raetian_auxiliary",
+      "name": "Raetian Auxiliary"
+    },
+    {
+      "id": "rom_pre_retentus",
+      "name": "Retentus"
+    },
+    {
+      "id": "rom_pre_sarmatian_lancers",
+      "name": "Sarmatian Lancers"
+    },
+    {
+      "id": "rom_pre_triarii",
+      "name": "Triarii"
+    },
+    {
+      "id": "rom_pre_war_dogs",
+      "name": "War Dogs"
+    },
+    {
+      "id": "rom_principes",
+      "name": "Principes"
+    },
+    {
+      "id": "rom_republican_skirmishers",
+      "name": "Republican Skirmishers"
+    },
+    {
+      "id": "rom_rorarii",
+      "name": "Rorarii"
+    },
+    {
+      "id": "rom_scorpion",
+      "name": "Scorpion"
+    },
+    {
+      "id": "rom_socii_extraordinarii",
+      "name": "Socii Extraordinarii"
+    },
+    {
+      "id": "rom_socii_javelineers",
+      "name": "Socii Javelineers"
+    },
+    {
+      "id": "rom_tirones",
+      "name": "Tirones"
+    },
+    {
+      "id": "rom_velites",
+      "name": "rom_velites"
+    },
+    {
+      "id": "rom_vespa",
+      "name": "Vespa"
+    },
+    {
+      "id": "rom_veteran_legionaries",
+      "name": "Veteran Legionaries"
+    },
+    {
+      "id": "rom_veteran_velites",
+      "name": "Veteran Velites"
+    },
+    {
+      "id": "rom_vitruvian_ballista",
+      "name": "Vitruvian Ballista"
+    },
+    {
+      "id": "rom_vitruvian_onager",
+      "name": "Vitruvian Onager"
+    },
+    {
+      "id": "rom_vitruvian_scorpion",
+      "name": "Vitruvian Scorpion"
+    }
+  ]
+}

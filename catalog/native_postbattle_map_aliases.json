@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "aliases": [
+    {"key": "alps", "ui_key": "alps_territory"},
+    {"key": "capitoline_hill", "ui_key": "capitoline_hill_territory"},
+    {"key": "capua", "ui_key": "capua_territory"},
+    {"key": "changban", "ui_key": "changban_territory"},
+    {"key": "gergovia", "ui_key": "gergovia_territory"},
+    {"key": "germania", "ui_key": "germania_territory"},
+    {"key": "hadrians_wall", "ui_key": "hadrians_wall_territory"},
+    {"key": "marathon", "ui_key": "marathon_territory"},
+    {"key": "oasis", "ui_key": "oasis_territory"},
+    {"key": "passage_of_augustus", "ui_key": "passage_of_augustus_territory"},
+    {"key": "rubicon", "ui_key": "rubicon_territory"},
+    {"key": "salernum", "ui_key": "salernum_territory"},
+    {"key": "teutoburg_forest", "ui_key": "teutoburg_forest_territory"},
+    {"key": "thermopylae", "ui_key": "thermopylae_territory"}
+  ]
+}
