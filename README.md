@@ -22,6 +22,7 @@ Assembly, SEGA or Epic Games**. Support and questions:
 | `manifests/launcher-stable.json`, `manifests/launcher-beta.json` | The Ed25519-signed update manifests (also served at `https://downloads.darask.me/launcher-manifests/stable.json`) |
 | `manifests/player-core-manifest.json` | SHA-256 and size of 2,085 of the ZIP's 2,087 files (all except this list itself and `player-release.json`). This list is not signed; only the two launcher manifests are. |
 | `verify_release.py` | A self-contained checker you can run yourself (below) |
+| `linux/` | Not part of the release: a script and a small compatibility layer to run the launcher and game on Linux through Proton ([linux/README.md](linux/README.md)) |
 
 Every code file is byte-for-byte identical to the release. Nothing was reformatted.
 
@@ -40,6 +41,16 @@ Every code file is byte-for-byte identical to the release. Nothing was reformatt
   `tools/player_native_payload.py`.
 - The project's server code, tests and development notes. Some comments in this code
   refer to those files by name.
+
+## Linux
+
+The launcher and the game run on Linux inside a Proton prefix. See [linux/README.md](linux/README.md):
+
+```
+linux/twa-proton.sh allow-ports
+linux/twa-proton.sh setup ~/Downloads/TWA-Launcher.zip
+linux/twa-proton.sh
+```
 
 ## Verify it yourself
 

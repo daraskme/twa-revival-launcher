@@ -48,7 +48,9 @@ PLAYER_RELEASE = {
     },
 }
 REPO_EXTRAS = {'README.md', 'verify_release.py', '.gitattributes', 'manifests/launcher-stable.json',
-               'manifests/launcher-beta.json', 'manifests/player-core-manifest.json'}
+               'manifests/launcher-beta.json', 'manifests/player-core-manifest.json',
+               # Linux/Proton support added after the release; not part of the ZIP.
+               'linux/README.md', 'linux/sitecustomize.py', 'linux/twa-proton.sh'}
 
 # --- Ed25519 verification (RFC 8032, section 6 reference algorithm) ---------------
 _P = 2 ** 255 - 19
