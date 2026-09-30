@@ -25,6 +25,10 @@ that need Windows components Proton does not ship:
 * Arena never signals ``WaitForInputIdle`` under Wine, so the launcher gave
   up after 30 seconds and closed the running game. A visible Arena window
   also counts as ready, and the first start may take up to 120 seconds.
+* Every launch replaced Arena's preferences.script.txt with the template
+  (its "damaged file" check matches every valid file), so in-game settings
+  never survived a restart. A valid saved file is now kept, including the
+  window size, position and fullscreen choice the launcher used to reset.
 * ``os.startfile`` on a folder opens the Linux file manager (winebrowser)
   instead of Wine's own explorer window.
 """
@@ -268,6 +272,62 @@ def _patch_native_launch(module) -> None:
     process_class.wait_input_idle = wait_input_idle
 
 
+# --- Keep Arena's saved settings --------------------------------------------------
+
+def _patch_launch_preparation(module) -> None:
+    """Keep the player's preferences.script.txt instead of resetting it every launch.
+
+    ``_build_preferences`` falls back to the template unless
+    ``text.count("x_res") == 1``, but every valid file contains that substring
+    four times (the key, its comment, and ``fix_res``), so graphics, sound and
+    advisor settings were replaced by the template on every launch. A file
+    that the launcher's own checks accept is handed in as the fallback.
+
+    The launcher also resets the window to at most 1600x900, windowed, at the
+    primary monitor's corner on every launch, so the resolution chosen in the
+    game never stuck. The saved size, position and fullscreen choice are put
+    back, capped to the primary monitor and re-centred if the saved window
+    would not fit on it.
+    """
+    import re
+    original = module._build_preferences
+
+    def saved_window(text):
+        def value(key, pattern):
+            found = re.findall(rf'^[ \t]*{key}[ \t]+({pattern});', text, re.M)
+            return found[0] if len(found) == 1 else None
+        numbers = [value(key, r'-?\d+') for key in ('x_res', 'y_res', 'x_pos', 'y_pos')]
+        fullscreen = value('gfx_fullscreen', 'true|false')
+        if None in numbers or fullscreen is None:
+            return None
+        return [int(number) for number in numbers] + [fullscreen == 'true']
+
+    def _build_preferences(current, template, monitor, *args, **kwargs):
+        window = None
+        if current is not None:
+            text = module._read_pref_text(current)
+            keys = [line.split(' ', 1)[0].rstrip(';') for line in text.splitlines()]
+            if text.strip() and not module._preferences_corrupt(text) and keys.count('x_res') == 1:
+                template = text
+                window = saved_window(text)
+        result = original(current, template, monitor, *args, **kwargs)
+        if window is None or window[0] <= 0 or window[1] <= 0:
+            return result
+        width, height = min(window[0], monitor['w']), min(window[1], monitor['h'])
+        x, y = window[2], window[3]
+        if not (monitor['x'] <= x <= monitor['x'] + monitor['w'] - width
+                and monitor['y'] <= y <= monitor['y'] + monitor['h'] - height):
+            x = monitor['x'] + (monitor['w'] - width) // 2
+            y = monitor['y'] + (monitor['h'] - height) // 2
+        text = module._read_pref_text(result)
+        for key, setting in (('x_res', width), ('y_res', height), ('x_pos', x), ('y_pos', y),
+                             ('gfx_fullscreen', window[4])):
+            text = module._set_preference(text, key, setting)
+        return b'\xff\xfe' + text.encode('utf-16-le')
+
+    module._build_preferences = _build_preferences
+
+
 # --- Folders open in the Linux file manager -----------------------------------
 
 def _patch_startfile() -> None:
@@ -295,6 +355,7 @@ _MODULE_PATCHES = {
     'tools.loopback_certificate': _patch_loopback_certificate,
     'tools.install_player': _patch_install_player,
     'companion.native_launch': _patch_native_launch,
+    'companion.launch_preparation': _patch_launch_preparation,
 }
 
 
