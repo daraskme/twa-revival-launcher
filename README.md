@@ -12,8 +12,9 @@ The next source changes improve port-conflict diagnostics, stop requiring local
 TCP port 80, preserve graphics settings during normal game shutdown, and notify
 the game when a local matchmaking wait expires or is aborted. QA has confirmed
 Apply / normal exit / restart retention for resolution and render scale on an
-RTX 5060 Ti Windows VM. Fresh-install and two-player battle checks are still in
-progress. The reported black terrain and vegetation issue is not claimed fixed.
+RTX 5060 Ti Windows VM. A fresh Windows VM installation has reached the signed-in
+game hangar. Two-player battle and cleanup checks are still in progress. The
+reported black terrain and vegetation issue is not claimed fixed.
 
 `main` tracks the latest published, verified source snapshot. Work in progress
 is available on the linked QA branch; it is promoted with the actual signed
@@ -30,6 +31,8 @@ source review snapshot, not a complete game or standalone build.
 
 - [Versioned launcher download](https://downloads.darask.me/launchers/0.2.43/TWA-Launcher-0.2.43.zip)
 - [Report a bug or review existing issues](https://github.com/daraskme/twa-revival-launcher/issues)
+- [Player support](https://darask.me/twa/support/) and [privacy information](https://darask.me/twa/privacy/)
+- [General game and account support](https://github.com/daraskme/twa-revival-support/issues/new/choose)
 - The latest download can move to another version; this snapshot is pinned to 0.2.43.
   The QA branch contains newer source without claiming a production release.
 
@@ -53,7 +56,8 @@ matchmaking/API backend. That backend is being prepared separately.
 
 No game EXE/DLL, model, texture, sound, translation, extracted catalog, bundled
 runtime, credential, or user diagnostic is included. Third-party runtime notices
-are preserved in `NOTICE.txt`. The separately obtained ZIP includes runtime/SDK
+are preserved in `NOTICE.txt`. Original game icons approved for the comparison
+website are not included in this repository. The separately obtained ZIP includes runtime/SDK
 components and `player-release.json`; the verifier never displays its credentials.
 
 The public `main` history was restarted from this source-only snapshot to remove
