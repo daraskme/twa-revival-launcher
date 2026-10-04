@@ -61,6 +61,9 @@ EXCLUDED_RELEASE_FILES = {
     'tools/build_native_specialization_binding.py', 'tools/native_fixed_family_mapper.py',
     'server/local_stack.py', 'server/native_postbattle_maps.py',
 }
+# Community Linux/Proton add-on (linux/README.md): not release files, not signed,
+# content not verified. Listed so the exact file set is still enforced.
+LINUX_ADDON = {'linux/README.md', 'linux/sitecustomize.py', 'linux/twa-proton.sh'}
 BOOTSTRAP_FILES = {'Launch TWA.cmd', 'tools/player_bootstrap.py', 'config/preferences.template.txt'}
 
 # --- Ed25519 verification (RFC 8032, section 6 reference algorithm) ---------------
@@ -187,7 +190,7 @@ def check_repository(problems):
     for row in published:
         if Path(row['path']).suffix not in ('.py', '.cmd', '.txt') and row['path'] != 'companion/VERSION':
             problems.append(f'non-source file in the published subset: {row["path"]}')
-    expected = {row['path'] for row in published} | REPO_EXTRAS
+    expected = {row['path'] for row in published} | REPO_EXTRAS | LINUX_ADDON
     present = set()
     for folder, dirs, files in os.walk(HERE):
         dirs[:] = [d for d in dirs if d not in ('.git', '__pycache__')]
@@ -208,6 +211,7 @@ def check_repository(problems):
                 problems.append(f'differs from the release: {row["path"]}')
     print(f'{len(published)} published code files compared with the release file list; '
           f'{len(present - expected)} unexpected file(s).')
+    print(f'{len(LINUX_ADDON)} Linux add-on files present; they are not part of the release and are not verified.')
     print(f'{len(EXCLUDED_RELEASE_FILES)} release files intentionally excluded (11 catalogs and 4 source files); their hashes remain in the original manifests.')
     check_manifest('launcher-stable.json', 'stable', code_rows, problems)
     return core

@@ -59,6 +59,7 @@ Assembly, SEGA or Epic Games**.
 | `manifests/launcher-stable.json` | Original Ed25519-signed manifest for all 131 launcher update files, including hashes of the 15 omitted files |
 | `manifests/player-core-manifest.json` | Unsigned hash/size list for 2,090 of the ZIP's 2,092 files; it excludes itself and `player-release.json` |
 | `verify_release.py`, `PUBLISHING.md` | Standalone verification and publication boundaries |
+| `linux/` | Community Linux/Proton add-on, **not part of the signed Windows release** or the ZIP; see [Linux](#linux) |
 
 The `server/` files are local services shipped inside the launcher, not the hosted
 matchmaking/API backend. A separate [server source snapshot](https://github.com/daraskme/twa-revival-server)
@@ -102,6 +103,22 @@ SHA-256 of the production `TWA-Launcher-0.2.43.zip`:
 
 Passing these checks establishes consistency with this release. It does not
 establish runtime correctness or publication rights for excluded materials.
+
+## Linux
+
+`linux/` contains a community add-on that runs the Windows launcher and the game on Linux
+inside a Proton prefix ([linux/README.md](linux/README.md)). It is not part of the signed
+release: it is not in the ZIP, not covered by the release key or manifests, and not
+delivered by launcher updates. The verifier only checks that these three files are present.
+Verify the ZIP above before setup, then:
+
+```sh
+linux/twa-proton.sh allow-ports
+linux/twa-proton.sh setup ~/Downloads/TWA-Launcher-0.2.43.zip
+linux/twa-proton.sh
+```
+
+Linux/Proton runtime acceptance by the project is pending.
 
 ## What the launcher does
 
