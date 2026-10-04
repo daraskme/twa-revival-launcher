@@ -43,8 +43,10 @@ reapply reviewed changes without merging the old ancestry back into the project.
 
 ## Repository layout
 
-Keep this launcher repository focused on released client-side source and its
-verification. The `server/` directory here is the local compatibility service
+Keep this launcher repository focused on client-side source and release
+verification. Keep reviewed, unreleased source changes on an explicitly labelled
+QA branch or draft pull request until the signed production snapshot is ready.
+The `server/` directory here is the local compatibility service
 shipped with the launcher, not the hosted backend.
 
 Prepare hosted matchmaking, relay, and API implementation in a separate server
@@ -68,3 +70,36 @@ notes rather than copying private deployment trees into this repository.
 The existing read-and-verify publication policy remains unchanged: no software
 license is granted for project code. A broader reuse license requires a separate
 decision; third-party notices must be preserved regardless.
+
+## Keeping the repository current
+
+For each launcher change, update the reviewed source branch and its draft pull
+request when the QA candidate is prepared. State what changed, what has actually
+been tested, and which release checks remain open. Do not advertise a candidate
+as the current download or substitute unsigned metadata for a release signature.
+The QA branch retains the production verifier as a reference: its 0.2.43
+source-hash check is expected to fail against changed candidate source. Run that
+verifier on `main` when checking the current production release.
+
+When production is released, complete the same pull request with the original
+signed stable manifest, complete release inventory, exact ZIP digest, matching
+verifier constants and current README. Run the positive and exclusion/tamper
+checks before merging it into `main`. Review the server and launcher separately;
+copy only the explicit source allowlist and never merge private or retired Git
+history. This is a maintainer release step, not an unattended upload job.
+
+## Public verification keys and private signing keys
+
+The Ed25519 public verification key is published in `companion/trusted_keys.py`
+and pinned independently by `verify_release.py`. Public keys can be stored in
+Git and distributed with the launcher. Pin a trusted key through an independently
+verified channel; a manifest must not be allowed to choose an arbitrary new key.
+
+Private signing keys must remain outside this repository, including its issues,
+Actions logs, releases and encrypted files committed to Git. A Windows DPAPI
+copy is useful for the local signing account but is not a portable recovery
+backup. Maintain a separately encrypted, OS-independent offline backup of the
+same signing key, with its recovery password stored separately. Test recovery by
+signing a harmless test message and verifying it with the already published
+public key before relying on the backup. Recovery should preserve key identity;
+changing the release key requires a separate trust-migration plan.

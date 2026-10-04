@@ -1,4 +1,24 @@
-# TWA Revival launcher — released source subset (0.2.43)
+# TWA Revival launcher
+
+## Release and development status
+
+| Track | Version | Status |
+|---|---|---|
+| Production / this `main` snapshot | 0.2.43 | Released; source and signed manifest can be checked below |
+| [Next source changes](https://github.com/daraskme/twa-revival-launcher/tree/qa/launcher-0.2.48) | 0.2.48 | QA candidate; not a production release |
+| Game payload / native payload | 0.2.5 / 0.2.4 | Unchanged by the 0.2.48 launcher candidate |
+
+The next source changes improve port-conflict diagnostics, stop requiring local
+TCP port 80, preserve graphics settings during normal game shutdown, and notify
+the game when a local matchmaking wait expires or is aborted. QA has confirmed
+Apply / normal exit / restart retention for resolution and render scale on an
+RTX 5060 Ti Windows VM. Fresh-install and two-player battle checks are still in
+progress. The reported black terrain and vegetation issue is not claimed fixed.
+
+`main` tracks the latest published, verified source snapshot. Work in progress
+is available on the linked QA branch; it is promoted with the actual signed
+release metadata after validation. A repository update alone does not install
+or deploy a game update. See [PUBLISHING.md](PUBLISHING.md) for the update workflow.
 
 This repository publishes **119 source/configuration files from the production
 TWA Revival launcher 0.2.43**, including three bootstrap files, byte-for-byte as
@@ -11,7 +31,7 @@ source review snapshot, not a complete game or standalone build.
 - [Versioned launcher download](https://downloads.darask.me/launchers/0.2.43/TWA-Launcher-0.2.43.zip)
 - [Report a bug or review existing issues](https://github.com/daraskme/twa-revival-launcher/issues)
 - The latest download can move to another version; this snapshot is pinned to 0.2.43.
-  Later QA changes are not represented as released here.
+  The QA branch contains newer source without claiming a production release.
 
 TWA Revival is a free, non-commercial, fan-run revival of the shut-down game
 *Total War: Arena*, operated by darask as an individual. It does not accept payments
