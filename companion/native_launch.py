@@ -24,7 +24,7 @@ from .api_client import normalize_api_base_url
 from .client_lock import client_operation_lock
 from .config import Config, load_session
 from .diagnostics import DiagnosticLog
-from .launcher import LaunchPlan, _WindowsJob, build_launch_plan, start_bridge
+from .launcher import BridgeStartError, LaunchPlan, _WindowsJob, build_launch_plan, start_bridge
 from .bridge_protocol import UnitControlBinding
 from .native_helper_protocol import (
     MAX_CONTROL_LINE as HELPER_CONTROL_LIMIT,
@@ -988,9 +988,23 @@ def run_authenticated_launch(
         if primary is None:
             primary = error
     if primary is not None:
+        if (isinstance(primary, BridgeStartError)
+                and getattr(primary, 'code', None) == 'loopback_bind_failed'):
+            bind_error = NativeLaunchError('required local network listener unavailable')
+            bind_error.code = 'loopback_bind_failed'
+            bind_error.bind_transport = getattr(primary, 'bind_transport', None)
+            bind_error.bind_family = primary.bind_family
+            bind_error.bind_port = primary.bind_port
+            bind_error.windows_error = primary.windows_error
+            primary = bind_error
         if not isinstance(primary, (KeyboardInterrupt, SystemExit)):
             diagnostic.event("launch_failed", operation, error=primary,
-                code=(primary.code if isinstance(primary, LoopbackCertificateError) else "game_launch_failed"),
+                code=(primary.code if isinstance(primary, LoopbackCertificateError) or
+                      getattr(primary, 'code', None) == 'loopback_bind_failed' else "game_launch_failed"),
+                bind_transport=getattr(primary, 'bind_transport', None),
+                bind_family=getattr(primary, 'bind_family', None),
+                bind_port=getattr(primary, 'bind_port', None),
+                windows_error=getattr(primary, 'windows_error', None),
                 exit_code=exit_code, crash=True)
         diagnostic.close()
         if isinstance(primary, (NativeLaunchError, LoopbackCertificateError, KeyboardInterrupt, SystemExit)):

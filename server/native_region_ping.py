@@ -10,7 +10,9 @@ from __future__ import annotations
 import errno
 import ipaddress
 import socket
+import sys
 import threading
+from pathlib import Path
 
 
 def local_server_list() -> dict:
@@ -34,6 +36,12 @@ def _valid_ping(data: bytes, peer: tuple[str, int]) -> bool:
         return False
 
 
+_SOURCE_ROOT = Path(__file__).resolve().parents[1]
+if str(_SOURCE_ROOT) not in sys.path:
+    sys.path.append(str(_SOURCE_ROOT))
+from companion.loopback_ports import annotate_bind_error
+
+
 class NativeRegionPing:
     """A single stoppable IPv4 loopback listener; port zero supports tests."""
 
@@ -55,7 +63,10 @@ class NativeRegionPing:
             # A second local process must not silently share or steal this port.
             if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
-            sock.bind(("127.0.0.1", self.port))
+            try:
+                sock.bind(("127.0.0.1", self.port))
+            except OSError as error:
+                raise annotate_bind_error(error, transport='udp', family='ipv4', port=self.port)
             sock.settimeout(0.2)
             self._stop.clear()
             self._echo_reported = False

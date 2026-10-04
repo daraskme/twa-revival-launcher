@@ -41,6 +41,7 @@ from native_custom_lobby import NativeLobbyError
 from native_matchmaking import BATTLE_RULESET_MAPS, QUEUE_SECONDS
 from native_battle_maps import is_native_battle_map
 from native_relay_ws_bridge import DEFAULT_RETRY_DELAYS, RelayBridge
+from companion.loopback_ports import bind_failure_code
 from native_cloud_loadout import CloudLoadoutError, _uint64, sync_cloud_loadout
 
 # Worker ``pollAfterMs`` is honoured inside these bounds so a bad value can
@@ -503,6 +504,8 @@ class DurableObjectRelayRunner:
         if not self._ready.wait(timeout):
             raise PvpCoordinatorError('relay_bridge_start_timeout')
         if self._error is not None:
+            if isinstance(self._error, OSError) and bind_failure_code(self._error) is not None:
+                raise self._error
             raise PvpCoordinatorError('relay_bridge_start_failed')
         assert self.port is not None
         return self.port

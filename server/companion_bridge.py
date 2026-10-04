@@ -67,6 +67,7 @@ _REPO_ROOT = _HERE.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.append(str(_REPO_ROOT))
 
+from companion.loopback_ports import annotate_bind_error, parse_bind_failure_code
 import local_stack as offline  # noqa: E402
 import native_connection_probe as probe  # noqa: E402
 from battle_api import (  # noqa: E402
@@ -92,7 +93,7 @@ from native_private_runtime import NativePrivateRuntime  # noqa: E402
 from native_party_selection_binding import PartySelectionBinding  # noqa: E402
 from native_private_notifier import NativePrivateXmppNotifier  # noqa: E402
 
-DEFAULT_HTTP_PORTS = (18765, 80, 443)
+DEFAULT_HTTP_PORTS = (18765, 443)
 MODES = ("pve", "pvp")
 RELAY_TARGETS = ("local", "durable_object", "switchable")
 XMPP_PORTS = (5222, 5223)
@@ -341,6 +342,8 @@ class RelaySupervisor:
         self._process_lock = threading.RLock()
         self._ready = threading.Event()
         self._failed = threading.Event()
+        self._output_drained = threading.Event()
+        self._bind_failure: OSError | None = None
         self._generation = 0
         self._ready_generation = -1
         self.process = None
@@ -369,21 +372,49 @@ class RelaySupervisor:
         """Consume the exact relay child's output and capture its bind ACK."""
         stream = getattr(process, "stdout", None)
         if stream is None:
+            self._output_drained.set()
             return
         try:
             for line in stream:
+                # The real ready record includes relay capabilities (~570 chars).
+                # Keep a bounded limit without dropping that startup acknowledgement.
+                if len(line) > 4096:
+                    continue
                 try:
                     row = json.loads(line)
                 except (TypeError, ValueError):
                     continue
-                if (isinstance(row, dict) and row.get("event") == "ready"
+                if not isinstance(row, dict):
+                    continue
+                if (row.get("event") == "ready"
                         and row.get("host") == "127.0.0.1"
                         and row.get("port") == self.port):
                     with self._process_lock:
                         if self.process is process and self._generation == generation:
                             self._ready_generation = generation
                             self._ready.set()
+                elif (row.get('event') == 'bind_error'
+                      and set(row) == {'time', 'event', 'host', 'port', 'code'}
+                      and row.get('host') == '127.0.0.1'
+                      and type(row.get('port')) is int
+                      and row['port'] == self.port):
+                    details = parse_bind_failure_code(row.get('code'))
+                    if (details is None or details['bind_transport'] != 'tcp'
+                            or details['bind_family'] != 'ipv4'
+                            or details['bind_port'] != self.port):
+                        continue
+                    error = OSError('owned local relay listener unavailable')
+                    annotate_bind_error(error, transport='tcp', family='ipv4', port=self.port)
+                    if details['windows_error'] is not None:
+                        error.winerror = details['windows_error']
+                    with self._process_lock:
+                        if self.process is process and self._generation == generation:
+                            self._bind_failure = error
+                            self._failed.set()
         finally:
+            with self._process_lock:
+                if self.process is process and self._generation == generation:
+                    self._output_drained.set()
             try:
                 stream.close()
             except OSError:
@@ -397,6 +428,8 @@ class RelaySupervisor:
                     self._generation += 1
                     generation = self._generation
                     self._ready.clear()
+                    self._output_drained.clear()
+                    self._bind_failure = None
                     self.process = process
             except OSError as error:
                 self._emit("companion_relay_spawn_failed", reason=type(error).__name__)
@@ -415,6 +448,9 @@ class RelaySupervisor:
                     break
                 self._stop.wait(0.25)
             if self._stop.is_set():
+                return
+            output_thread.join(timeout=1.0)
+            if self._failed.is_set():
                 return
             self.restarts += 1
             self._emit("companion_relay_exited", restarts=self.restarts,
@@ -452,7 +488,14 @@ class RelaySupervisor:
                 generation = self._generation
                 ready = (self._ready.is_set()
                          and self._ready_generation == generation)
-            if self._failed.is_set() or (process is not None and process.poll() is not None):
+            exited = process is not None and process.poll() is not None
+            if exited and not self._failed.is_set():
+                self._output_drained.wait(min(0.5, max(0.0, deadline - time.monotonic())))
+            if self._failed.is_set() or exited:
+                with self._process_lock:
+                    bind_failure = self._bind_failure
+                if bind_failure is not None:
+                    raise bind_failure
                 raise BridgeError("local_relay_start_failed")
             if ready:
                 if stable_generation != generation:

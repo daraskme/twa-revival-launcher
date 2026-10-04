@@ -23,6 +23,7 @@ import json
 import math
 import os
 import queue
+import re
 import secrets
 import threading
 import time
@@ -40,7 +41,7 @@ from .player_name import validate_display_name
 
 _SUPPORTED_MODES = ("frontend",)
 _BRIDGE_SURFACES = {
-    "http": [18765, 80, 443], "xmpp": [5222, 5223],
+    "http": [18765, 443], "xmpp": [5222, 5223],
     "region_udp": 19063, "relay_tcp": 19000,
 }
 
@@ -155,6 +156,35 @@ def redacted_user_script(plan: LaunchPlan) -> str:
 
 class BridgeStartError(RuntimeError):
     """The owned bridge did not reach its authenticated ready boundary."""
+
+
+def _bind_failure_from_child(record: dict, nonce: str) -> BridgeStartError | None:
+    """Accept only a bounded bind code from this exact owned child."""
+    if record.get('protocol') != PROTOCOL or record.get('nonce') != nonce:
+        return None
+    from .loopback_ports import parse_bind_failure_code
+    details = parse_bind_failure_code(record.get('error'))
+    if details is None:
+        return None
+    error = BridgeStartError('required local network listener unavailable')
+    error.code = 'loopback_bind_failed'
+    for name, value in details.items():
+        setattr(error, name, value)
+    return error
+
+
+def _check_bridge_ports() -> None:
+    from .loopback_ports import check_loopback_ports, bind_failure_code
+    try:
+        check_loopback_ports(_BRIDGE_SURFACES)
+    except OSError as error:
+        failure = _bind_failure_from_child({
+            'protocol': PROTOCOL, 'nonce': 'preflight',
+            'error': bind_failure_code(error),
+        }, 'preflight')
+        if failure is not None:
+            raise failure from None
+        raise BridgeStartError('cannot check required local network listeners') from None
 
 
 class _WindowsJob:
@@ -574,6 +604,7 @@ def start_bridge(config: Config, *, mode: str = "pve",
     owner = None
     try:
         with client_operation_lock(config.client_dir):
+            _check_bridge_ports()
             process = subprocess.Popen(command, **popen_kwargs)
             owner = _ProcessOwner(process, windows_job)
             if windows_job is not None:
@@ -611,6 +642,9 @@ def start_bridge(config: Config, *, mode: str = "pve",
             ready = _read_control_record(process.stdout, process, float(timeout))
             expected_surfaces = _BRIDGE_SURFACES
             if ready.get("event") == "error":
+                bind_failure = _bind_failure_from_child(ready, nonce)
+                if bind_failure is not None:
+                    raise bind_failure
                 raise BridgeStartError("bridge child rejected startup")
             if (ready.get("protocol") != PROTOCOL
                     or ready.get("event") != "ready"

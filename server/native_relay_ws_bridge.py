@@ -35,6 +35,7 @@ import base64
 import hashlib
 import json
 import os
+import socket
 import ssl
 import struct
 import sys
@@ -42,6 +43,11 @@ import time
 import urllib.parse
 from pathlib import Path
 from typing import Awaitable, Callable
+
+_SOURCE_ROOT = Path(__file__).resolve().parents[1]
+if str(_SOURCE_ROOT) not in sys.path:
+    sys.path.append(str(_SOURCE_ROOT))
+from companion.loopback_ports import annotate_bind_error
 
 GREETING_MAGIC = b'CAReconn01\0'
 GREETING_BYTES = 40
@@ -622,7 +628,30 @@ class RelayBridge:
         return await WebSocketClient.connect(self.ws_url, ssl_context=self.ssl_context)
 
     async def start(self) -> int:
-        self.server = await asyncio.start_server(self._accept, self.host, self.port)
+        if self.host in ('127.0.0.1', '::1'):
+            family = socket.AF_INET6 if self.host == '::1' else socket.AF_INET
+            listener = socket.socket(family, socket.SOCK_STREAM)
+            try:
+                if hasattr(socket, 'SO_EXCLUSIVEADDRUSE'):
+                    listener.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+                if family == socket.AF_INET6:
+                    listener.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+                try:
+                    listener.bind((self.host, self.port))
+                    listener.listen()
+                except OSError as error:
+                    raise annotate_bind_error(
+                        error, transport='tcp',
+                        family='ipv6' if family == socket.AF_INET6 else 'ipv4',
+                        port=self.port)
+                listener.setblocking(False)
+                self.server = await asyncio.start_server(self._accept, sock=listener)
+            except BaseException:
+                listener.close()
+                raise
+        else:
+            # `localhost` is a development-only alias with OS-dependent family.
+            self.server = await asyncio.start_server(self._accept, self.host, self.port)
         self.port = self.server.sockets[0].getsockname()[1]
         self.log('ready', host=self.host, port=self.port)
         return self.port

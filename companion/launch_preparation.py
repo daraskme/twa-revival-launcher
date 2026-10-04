@@ -59,10 +59,11 @@ _PREFERENCE_KEYS = {
     "gfx_water_quality": "int", "gfx_effects_quality": "int", "gfx_vsync": "bool",
     "gfx_ssao": "bool", "gfx_distortion": "bool", "gfx_gpu": "string",
 }
-# Only values exposed by the native graphics menu may survive a game-side
-# preferences write.  Window placement, platform, identity and auth settings
-# remain owned by the launch transaction.
+# Values exposed by the native graphics menu, including resolution and display
+# mode, survive a game-side preferences write. Window placement, platform,
+# identity and auth settings remain owned by the launch transaction.
 _PERSISTENT_GRAPHICS_KEYS = {
+    "x_res": "width", "y_res": "height", "gfx_fullscreen": "bool",
     "gfx_aa": "int", "gfx_texture_quality": "int",
     "gfx_texture_filtering": "int", "gfx_sky_quality": "int",
     "gfx_unit_quality": "int", "gfx_building_quality": "int",
@@ -504,16 +505,36 @@ def _build_preferences(current: bytes | None, template: str,
         from .player_name import validate_display_name
         validate_display_name(display_name)
     text = _read_pref_text(current) if current is not None else ""
-    if (not text.strip() or _preferences_corrupt(text)
-            or len(re.findall(r"^[ \t]*x_res[ \t]+\d+;", text, re.M)) != 1):
+    use_fallback = (not text.strip() or _preferences_corrupt(text)
+                   or len(re.findall(r"^[ \t]*x_res[ \t]+\d+;", text, re.M)) != 1)
+    if use_fallback:
         text = template
         for key, value in _FALLBACK_GRAPHICS.items():
             text = _set_preference(text, key, value)
+    display: dict[str, object] = {
+        "x_res": min(monitor["w"], 1600),
+        "y_res": min(monitor["h"], 900),
+        "gfx_fullscreen": False,
+    }
+    if not use_fallback:
+        saved = {key: _graphics_assignment(text, key) for key in display}
+        # Treat width/height as a pair. Do not clamp a valid saved mode to the
+        # desktop size: fullscreen and supersampled modes can exceed it.
+        if all(saved[key] is not None and _valid_graphics_value(key, saved[key][2].strip())
+               for key in ("x_res", "y_res")):
+            for key in ("x_res", "y_res"):
+                display[key] = int(saved[key][2].strip())
+        mode = saved["gfx_fullscreen"]
+        if mode is not None and _valid_graphics_value("gfx_fullscreen", mode[2].strip()):
+            display["gfx_fullscreen"] = mode[2].strip() == "true"
+    # Remove malformed display assignments too, so fallback cannot append a
+    # second definition after an invalid value such as `y_res unknown;`.
+    for key, value in display.items():
+        text = re.sub(rf"(?m)^[ \t]*{re.escape(key)}[ \t]+[^\r\n]*(?:\r?\n|$)", "", text)
+        text = _set_preference(text, key, value)
     values: tuple[tuple[str, object], ...] = (
-        ("x_res", min(monitor["w"], 1600)),
-        ("y_res", min(monitor["h"], 900)),
         ("x_pos", monitor["x"]), ("y_pos", monitor["y"]),
-        ("gfx_fullscreen", False), ("fix_res", True),
+        ("fix_res", True),
         ("fix_window_pos", True), ("gfx_show_pre_launch_window", False),
         ("write_preferences_at_exit", False), ("FRONTEND_SCENE_ENABLED", True),
         ("PERMANENTLY_SKIP_TUTORIAL", True), ("show_frontend_movies", False),
@@ -569,6 +590,10 @@ def _valid_graphics_value(key: str, value: str) -> bool:
         return len(value) <= 258 and re.fullmatch(r'"[^";\r\n\0]*"', value) is not None
     if kind == "bool":
         return value in ("true", "false")
+    if kind in ("width", "height"):
+        if re.fullmatch(r"[0-9]{3,5}", value) is None:
+            return False
+        return (640 if kind == "width" else 480) <= int(value) <= 16384
     if kind in ("int", "fps"):
         if re.fullmatch(r"[0-9]{1,3}", value) is None:
             return False
@@ -614,6 +639,20 @@ def _merge_verified_graphics(before: bytes | None, after: bytes,
     merged = baseline
     for key, value in observed_values.items():
         if value == original_values[key]:
+            continue
+        if key in ("x_pos", "y_pos"):
+            # Native Apply may record the window frame position. Keep the
+            # launch-owned baseline, after checking that this is only a
+            # bounded coordinate rewrite.
+            if (re.fullmatch(r"-?[0-9]{1,6}", value) is None
+                    or not -131072 <= int(value) <= 131072):
+                raise LaunchPreparationError(
+                    "owned preferences contain an invalid window position")
+            continue
+        if key == "battle_advice_level" and value == "0":
+            # User.script requests level 0, which native Apply may copy into
+            # preferences. It is a launch-time override, not a menu choice;
+            # retain the user's original preference in the durable file.
             continue
         if key not in _PERSISTENT_GRAPHICS_KEYS or not _valid_graphics_value(key, value):
             raise LaunchPreparationError("owned preferences contain an invalid graphics value")

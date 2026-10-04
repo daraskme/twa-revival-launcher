@@ -1,93 +1,59 @@
-# TWA Revival launcher
+# TWA Revival launcher — 0.2.48 QA source
 
-## Release and development status
+This branch contains **120 reviewed source/configuration files** from the
+0.2.48 launcher candidate. The source is available for review while Windows VM
+QA continues. **0.2.48 has not been released to production.** The published
+production snapshot and its signed verification are on
+[`main` (0.2.43)](https://github.com/daraskme/twa-revival-launcher/tree/main).
 
-| Track | Version | Status |
-|---|---|---|
-| Production / this `main` snapshot | 0.2.43 | Released; source and signed manifest can be checked below |
-| [Next source changes](https://github.com/daraskme/twa-revival-launcher/tree/qa/launcher-0.2.48) | 0.2.48 | QA candidate; not a production release |
-| Game payload / native payload | 0.2.5 / 0.2.4 | Unchanged by the 0.2.48 launcher candidate |
+This is a source subset, not a complete game or standalone build. Game assets,
+extracted catalogs, four held files containing game instruction/data material,
+third-party binaries, private configuration and diagnostics are excluded.
+See [PUBLISHING.md](PUBLISHING.md) for the exact boundary and release workflow.
 
-The next source changes improve port-conflict diagnostics, stop requiring local
-TCP port 80, preserve graphics settings during normal game shutdown, and notify
-the game when a local matchmaking wait expires or is aborted. QA has confirmed
-Apply / normal exit / restart retention for resolution and render scale on an
-RTX 5060 Ti Windows VM. Fresh-install and two-player battle checks are still in
-progress. The reported black terrain and vegetation issue is not claimed fixed.
+TWA Revival is a free, non-commercial fan project. It is not affiliated with,
+endorsed by or supported by Creative Assembly, SEGA or Epic Games. Publishing
+this source does not grant rights to the original game or third-party materials.
 
-`main` tracks the latest published, verified source snapshot. Work in progress
-is available on the linked QA branch; it is promoted with the actual signed
-release metadata after validation. A repository update alone does not install
-or deploy a game update. See [PUBLISHING.md](PUBLISHING.md) for the update workflow.
+## Changes under validation
 
-This repository publishes **119 source/configuration files from the production
-TWA Revival launcher 0.2.43**, including three bootstrap files, byte-for-byte as
-distributed. The verifier and repository documentation are listed separately.
-Game assets and the
-11 extracted or provenance-unverified catalog files are excluded, along with four
-source files that embed original instruction sequences or game-data mappings. This is a
-source review snapshot, not a complete game or standalone build.
+- Stop requesting local TCP port 80, avoiding that startup conflict.
+- Report validated protocol, address family and port details when a required
+  local TCP or UDP socket cannot be opened.
+- Preserve supported resolution, display mode and graphics changes during normal
+  shutdown, including native position/advice rewrites made by graphics Apply.
+- Notify the native game when an unbound matchmaking queue expires or is aborted.
 
-- [Versioned launcher download](https://downloads.darask.me/launchers/0.2.43/TWA-Launcher-0.2.43.zip)
-- [Report a bug or review existing issues](https://github.com/daraskme/twa-revival-launcher/issues)
-- The latest download can move to another version; this snapshot is pinned to 0.2.43.
-  The QA branch contains newer source without claiming a production release.
+The candidate retains game payload 0.2.5 and native payload 0.2.4. Actual QA048
+Apply / normal exit / restart retained 1280x900 resolution and render scale 0.5
+on an RTX 5060 Ti Windows VM. Fresh-install and two-player battle checks remain
+open. The black terrain/vegetation report is not claimed fixed.
 
-TWA Revival is a free, non-commercial, fan-run revival of the shut-down game
-*Total War: Arena*, operated by darask as an individual. It does not accept payments
-or donations. It is **not affiliated with, endorsed by or supported by Creative
-Assembly, SEGA or Epic Games**.
+## Source and release verification
 
-## What is published
+The 16 changed files and one added file (`companion/loopback_ports.py`) preserve
+the exact bytes of the prepared 0.2.48 candidate; the remaining published source
+is unchanged from 0.2.43. Only reviewed source is added to this branch.
 
-| Path | Scope |
+`manifests/` and `verify_release.py` are still the original **0.2.43 release
+reference**, not a signature for this candidate. Its source-hash check is
+expected to fail against changed QA source. To verify the production download,
+use the instructions and verifier on `main`. Before merging this branch, replace
+release metadata only with the actual production signed manifest, update the
+verifier, and pass its source/ZIP and tamper/exclusion checks.
+
+| Path | Purpose |
 |---|---|
-| `companion/`, `server/`, `tools/`, `NOTICE.txt` | 116 signed update source files, excluding the three bootstrap files named below |
-| `Launch TWA.cmd`, `tools/player_bootstrap.py`, `config/preferences.template.txt` | Three additional source/configuration files from the release ZIP |
-| `manifests/launcher-stable.json` | Original Ed25519-signed manifest for all 131 launcher update files, including hashes of the 15 omitted files |
-| `manifests/player-core-manifest.json` | Unsigned hash/size list for 2,090 of the ZIP's 2,092 files; it excludes itself and `player-release.json` |
-| `verify_release.py`, `PUBLISHING.md` | Standalone verification and publication boundaries |
+| `companion/` | Launcher orchestration, identity, updates, diagnostics and local game preparation |
+| `server/` | Client-side compatibility services shipped with the launcher; not the hosted backend |
+| `tools/` | Launcher UI, installation, bootstrap and runtime integration |
+| `Launch TWA.cmd`, `config/preferences.template.txt` | Release entry point and preference defaults |
+| `NOTICE.txt` | Third-party runtime notices; the binaries themselves are excluded |
 
-The `server/` files are local services shipped inside the launcher, not the hosted
-matchmaking/API backend. That backend is being prepared separately.
-
-No game EXE/DLL, model, texture, sound, translation, extracted catalog, bundled
-runtime, credential, or user diagnostic is included. Third-party runtime notices
-are preserved in `NOTICE.txt`. The separately obtained ZIP includes runtime/SDK
-components and `player-release.json`; the verifier never displays its credentials.
-
-The public `main` history was restarted from this source-only snapshot to remove
-the earlier catalog-bearing ancestry. This does **not** erase copies in forks,
-old clones, pull-request references, or caches. Existing contributors should use
-a fresh clone and reapply only reviewed source changes; merging old history back
-would reintroduce the excluded content. See [PUBLISHING.md](PUBLISHING.md).
-
-## Verify the snapshot
-
-Use Python 3.8 or newer, standard library only, with no network access:
-
-```sh
-python -I verify_release.py
-python -I verify_release.py --zip path/to/TWA-Launcher-0.2.43.zip
-```
-
-The verifier does not import or run launcher code. It checks the exact published
-file set, the absence of all 15 explicitly excluded files, each source file's size/hash,
-and the complete stable manifest's Ed25519 signature using release key
-`2751aa46b0af141c`. The signed manifest is preserved unchanged; its omitted-data
-records contain paths and hashes, not the game data itself.
-
-With `--zip`, it also checks the complete archive SHA-256, duplicate entries,
-every listed file, and the non-secret configuration fields. The three bootstrap
-files and runtime hashes are in the unsigned core list, not the launcher signature;
-the pinned ZIP digest provides the full-archive comparison. The beta channel is
-independent and is not represented as a 0.2.43 manifest here.
-
-SHA-256 of the production `TWA-Launcher-0.2.43.zip`:
-`ff9dd3e96efbd2fbfd0ebf3536d1274c5eac93fd598d61659f4ce35a0ad7622a`
-
-Passing these checks establishes consistency with this release. It does not
-establish runtime correctness or publication rights for excluded materials.
+Bugs and review feedback belong in
+[Issues](https://github.com/daraskme/twa-revival-launcher/issues). Include the
+launcher version, Windows/GPU details and reproduction steps. Do not post
+credentials, tokens, signing keys, game assets or unredacted logs publicly.
 
 ## What the launcher does
 
@@ -141,7 +107,7 @@ not stored or sent.
 
 - Starts local stand-in services for the original game servers. **They listen only on
   loopback** (127.0.0.1 and ::1) and cannot be reached from other machines:
-  TCP 18765, 80, 443 (HTTP/HTTPS), TCP 5222 and 5223 (XMPP), UDP 19063 and TCP 19000.
+  TCP 18765 and 443 (HTTP/HTTPS), TCP 5222 and 5223 (XMPP), UDP 19063 and TCP 19000.
 - For the duration of the game session it writes:
   - `%APPDATA%\The Creative Assembly\Arena\scripts\User.script.txt` and
     `preferences.script.txt` (window settings, `ONLINE_PLATFORM fake`, the project session
@@ -156,8 +122,9 @@ not stored or sent.
   launcher restores session-only bindings, merges supported graphics changes, and removes
   the registry value it created; the registry key itself is left in place
   (`companion/launch_preparation.py`). If cleanup fails or the launcher is killed during
-  play, the files and the value can remain. Additional graphics-persistence fixes are
-  under testing and are not included in this 0.2.43 snapshot.
+  play, the files and the value can remain. This candidate also validates native
+  window-position changes and preserves the original advice setting when the game
+  rewrites it during graphics Apply, so those rewrites do not discard valid choices.
 - Starts `Arena.exe +auth <project session token>`: created suspended, placed in a Windows
   Job object (so it closes with the launcher) and then resumed. While the game runs, the
   session token is visible on Arena's command line to other programs running as the same
@@ -236,8 +203,8 @@ darask holds, and are checked by SHA-256; unsigned, altered or older files are r
   (CEF) files), plus `data/wad.pack` and 14 terrain packs.
 
 In practice, whoever holds the release key can change anything described on this page,
-and the new code runs with your Windows user rights. This repository shows version 0.2.43
-only; checking it does not check later versions.
+and the new code runs with your Windows user rights. This branch shows candidate
+0.2.48 source; it does not prove the contents of a future signed release.
 
 ### What it does not do
 

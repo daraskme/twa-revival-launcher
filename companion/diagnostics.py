@@ -35,7 +35,7 @@ ERROR_CODES = frozenset(("invalid_login_response", "invalid_session_token_respon
     "install_failed", "install_space", "install_permission", "install_busy",
     "install_destination", "install_files", "install_download", "install_launcher",
     "eos_auth_login", "eos_auth_token", "eos_connect_login", "eos_connect_create", "eos_connect_token",
-    "loopback_dns_missing", "loopback_repair_failed", "loopback_repair_cancelled", "loopback_repair_unresolved",
+    "loopback_dns_missing", "loopback_bind_failed", "loopback_repair_failed", "loopback_repair_cancelled", "loopback_repair_unresolved",
     "loopback_repair_unsupported", "loopback_tls_failed", "loopback_repair_permission", "loopback_repair_timeout"))
 VERSION = re.compile(r"[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}(?:[-+][A-Za-z0-9.-]{1,32})?\Z")
 EXCEPTION_CLASSES = frozenset(("WorkerLoginResponseError", "Exception", "RuntimeError", "ValueError", "TypeError", "OSError",
@@ -212,7 +212,7 @@ class DiagnosticLog:
 
     def event(self, event, operation, *, error=None, code=None, exit_code=None, eos_result=None, crash=False,
               installer_phase=None, repair_stage=None, windows_error=None, helper_exit=None,
-              renderer_mode=None):
+              renderer_mode=None, bind_family=None, bind_port=None, bind_transport=None):
         if not self.available:
             return
         try:
@@ -227,6 +227,14 @@ class DiagnosticLog:
                 if event == "renderer_profile" and renderer_mode in (
                     "software", "hardware", "unknown", "preserved-software"):
                     value["rendererMode"] = renderer_mode
+                if operation in ('bridge_start', 'launch') and code == 'loopback_bind_failed':
+                    if bind_transport in ('tcp', 'udp'):
+                        value['bindTransport'] = bind_transport
+                    if bind_family in ('ipv4', 'ipv6') and type(bind_port) is int and 1 <= bind_port <= 65535:
+                        value['bindFamily'] = bind_family
+                        value['bindPort'] = bind_port
+                    if type(windows_error) is int and 0 <= windows_error <= 0xffffffff:
+                        value['windowsErrorCode'] = windows_error
                 if operation == 'repair_hosts':
                     if repair_stage in ('start', 'process_handle', 'wait', 'helper_exit'):
                         value['repairStage'] = repair_stage

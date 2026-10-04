@@ -3587,11 +3587,20 @@ def main(argv: list[str] | None = None, *,
             _refresh_offline_economy_views(economy_service)
             ProbeHandler.economy_service = economy_service
         # Bind every requested listener before serving; conflicts fail closed.
+        # Attach only bounded, public socket coordinates to an OS bind error;
+        # the private child can report them without exposing exception text.
         for port in args.ports:
             if not 1 <= port <= 65535:
                 raise ValueError('invalid port')
-            servers.append(offline.DualProtocolServer(('127.0.0.1', port), ProbeHandler))
-            servers.append(offline.DualProtocolServer6(('::1', port), ProbeHandler))
+            for family, server_type, host in (
+                    ('ipv4', offline.DualProtocolServer, '127.0.0.1'),
+                    ('ipv6', offline.DualProtocolServer6, '::1')):
+                try:
+                    servers.append(server_type((host, port), ProbeHandler))
+                except OSError as error:
+                    from companion.loopback_ports import annotate_bind_error
+                    annotate_bind_error(error, transport='tcp', family=family, port=port)
+                    raise
         if args.xmpp:
             # A local fake-player hub, never production authentication.
             xmpp_hub = NativeXmppProbe(ProbeHandler._trace)
