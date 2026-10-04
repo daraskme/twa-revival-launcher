@@ -6,10 +6,12 @@ The EOS SDK lives and ticks on the launch supervisor's thread, never the UI.
 """
 from contextlib import contextmanager
 import time
+from typing import Callable
 
 from .api_client import ApiClient, ApiError, NetworkError
+from .auth import session_expiry, WorkerLoginResponseError
 from .config import load_session, save_session, SessionChangedError
-from .eos.session import EosSession, EosLoginError
+from .eos.session import ConnectIdToken, EosSession, EosLoginError
 from .native_launch import session_snapshot
 
 
@@ -36,7 +38,7 @@ class SessionKeeper:
     def renew(self, token):
         now = int(self.clock())
         if (token.puid != self.current['puid'] or type(token.expires_at) is not int
-                or token.expires_at <= now or self.current['expiresAt'] <= now):
+                or token.expires_at <= 0 or self.current['expiresAt'] <= now):
             raise PlayerSessionError('login_required')
         if load_session(self.config) != self.current:
             raise PlayerSessionError('session_changed')
@@ -48,14 +50,15 @@ class SessionKeeper:
         result = api.renew_session(token.token)
         expiry = result.get('expiresAt') if isinstance(result, dict) else None
         user = result.get('user') if isinstance(result, dict) else None
-        # A replay cannot extend beyond its Epic proof; a shorter proof must
-        # not roll back the previously verified expiration either.
-        upper = max(self.current['expiresAt'], min(token.expires_at, now + 3605))
-        if (type(expiry) is not int or not max(int(self.clock()), self.current['expiresAt']-1) < expiry <= upper
-                or not isinstance(user, dict) or user.get('id') != self.current['puid']
+        if (not isinstance(user, dict) or user.get('id') != self.current['puid']
                 or set(result) != {'expiresAt', 'user'}):
             raise PlayerSessionError('invalid_session_renewal')
-        updated = {**self.current, 'expiresAt': expiry}
+        try:
+            lifetime = session_expiry(api, expiry, token.expires_at,
+                                      now=int(self.clock()), previous=self.current)
+        except WorkerLoginResponseError:
+            raise PlayerSessionError('invalid_session_renewal') from None
+        updated = {**self.current, **lifetime}
         try:
             save_session(self.config, updated, expected_session=self.current)
         except SessionChangedError:
@@ -83,13 +86,19 @@ class SessionKeeper:
 
 
 @contextmanager
-def maintain_player_session(release):
+def maintain_player_session(release, *,
+        prepare_session: Callable[[EosSession], ConnectIdToken | None] | None = None):
     eos = release.eos
     with EosSession(release.config.repo_root/'runtime/EOSSDK-Win64-Shipping.dll',
                     eos['productId'], eos['sandboxId'], eos['deploymentId'],
                     eos['clientId'], eos['clientSecret'], call_timeout_s=30.0) as backend:
+        # An expired saved Worker session may need a persistent EOS login and
+        # exchange first. Keep that proof in this same SDK lifetime and give it
+        # to the keeper instead of logging into EOS a second time.
+        prepared_token = prepare_session(backend) if prepare_session is not None else None
         keeper = SessionKeeper(release.config, backend)
         # Resume the explicitly selected existing account. No fallback portal,
         # new Connect account, or developer login is invoked during a game.
-        keeper.renew(backend.login('persistent', allow_create_connect=False))
+        keeper.renew(prepared_token if prepared_token is not None else
+                     backend.login('persistent', allow_create_connect=False))
         yield keeper

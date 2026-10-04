@@ -5,9 +5,11 @@ every operation; JIDs supply only the *target* of an invitation or request.
 """
 from __future__ import annotations
 import copy
+import hashlib
 import re
 import threading
 import time
+import uuid
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape, quoteattr
 
@@ -17,6 +19,14 @@ VCARD='vcard-temp'
 NICK='http://jabber.org/protocol/nick'
 DATA='jabber:x:data'
 ID=re.compile(r'[A-Za-z0-9_-]{1,36}\Z')
+CHAT_HOST = 'conference.revival-xmpp.localhost'
+CHAT_ROOM = re.compile(r'(party|lobby)-([A-Za-z0-9_-]{1,128})@' + re.escape(CHAT_HOST) + r'\Z')
+
+def chat_room_jid(scope, identifier):
+    jid = f'{scope}-{identifier}@{CHAT_HOST}'
+    if not CHAT_ROOM.fullmatch(jid):
+        raise ValueError('invalid_chat_room')
+    return jid
 
 def _xml_text(value):
     return isinstance(value,str) and all(
@@ -45,6 +55,123 @@ class NativeSocial:
         self._snapshot={'friends':[],'incoming':[],'outgoing':[],'recent':[],'party':None,'invitations':[]}
         self._stop=threading.Event();self._thread=None;self._publish=None
         self._search_results=[]
+        self._chat_delivery = None
+        self._chat_nonce = uuid.uuid4().hex
+        self._chat_delivered = []
+        self._chat_rooms = {}
+
+    def _room_request(self, jid, action, body):
+        match = CHAT_ROOM.fullmatch(jid)
+        if not match:
+            raise ValueError('invalid_chat_room')
+        scope, identifier = match.groups()
+        path = '/v1/social/party' + action if scope == 'party' else '/v1/rooms/' + identifier + '/' + action
+        return self.api._request('POST', path,
+            body={**body, **({'partyId': identifier} if scope == 'party' else {})})
+
+    def room_presence(self, jid, *, leave=False):
+        """Authorize current membership before acknowledging a native MUC join."""
+        if not CHAT_ROOM.fullmatch(jid):
+            raise ValueError('invalid_chat_room')
+        if leave:
+            with self._lock:
+                self._chat_rooms.pop(jid, None)
+            return
+        response = self._room_request(jid, 'messages', {'after': 0})
+        self._validate_messages(response, channel=True)
+        with self._lock:
+            if jid not in self._chat_rooms and len(self._chat_rooms) >= 4:
+                raise ValueError('chat_room_limit')
+            self._chat_rooms.setdefault(jid, 0)
+
+    def message(self, element):
+        """Send ordinary direct chat using the authenticated bridge identity."""
+        if element.get('type') not in (None, 'chat', 'normal', 'groupchat'):
+            raise ValueError('unsupported_chat_type')
+        bodies = [node for node in element if node.tag in ('body', '{jabber:client}body')]
+        if not bodies:
+            return  # Composing/active chat-state notifications carry no text.
+        if len(bodies) != 1 or len(bodies[0]):
+            raise ValueError('invalid_chat_body')
+        text = bodies[0].text
+        if not _xml_text(text) or not text.strip() or len(text.encode('utf-8')) > 2048:
+            raise ValueError('invalid_chat_body')
+        stanza_id = element.get('id')
+        if stanza_id is not None and (not isinstance(stanza_id, str) or len(stanza_id) > 128):
+            raise ValueError('invalid_chat_id')
+        request_id = hashlib.sha256((self._chat_nonce + ':' + (stanza_id or uuid.uuid4().hex)).encode()).hexdigest()
+        if element.get('type') == 'groupchat':
+            target = element.get('to', '').split('/', 1)[0]
+            with self._lock:
+                if target not in self._chat_rooms:
+                    raise ValueError('chat_room_not_joined')
+            response = self._room_request(target, 'chat', {'text': text, 'requestId': request_id})
+        else:
+            target = self.target(element.get('to'))
+            response = self.api._request('POST', '/v1/social/chat', body={
+                'target': target, 'text': text, 'requestId': request_id})
+        if not isinstance(response, dict) or response.get('accepted') is not True:
+            raise ValueError('invalid_chat_response')
+
+    @staticmethod
+    def _validate_messages(response, *, channel=False):
+        rows = response.get('messages') if isinstance(response, dict) else None
+        if not isinstance(rows, list) or len(rows) > (100 if channel else 32):
+            raise ValueError('invalid_chat_response')
+        sequence = 0
+        for row in rows:
+            if (not isinstance(row, dict) or not isinstance(row.get('id'), str)
+                    or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}', row['id'])
+                    or not isinstance(row.get('senderId'), str) or not ID.fullmatch(row['senderId'])
+                    or not _xml_text(row.get('displayName')) or len(row['displayName']) > 128
+                    or not _xml_text(row.get('text')) or not row['text'].strip()
+                    or len(row['text'].encode('utf-8')) > 2048):
+                raise ValueError('invalid_chat_response')
+            if channel:
+                if type(row.get('sequence')) is not int or not sequence < row['sequence'] < 2**53:
+                    raise ValueError('invalid_chat_response')
+                sequence = row['sequence']
+        return rows
+
+    def poll_messages(self):
+        if self._chat_delivery is None:
+            return
+        response = self.api._request('POST', '/v1/social/messages', body={})
+        rows = self._validate_messages(response)
+        ids = []
+        for row in rows:
+            if row['id'] not in self._chat_delivered:
+                if self._chat_delivery(copy.deepcopy(row)) is not True:
+                    continue
+                self._chat_delivered = (self._chat_delivered + [row['id']])[-128:]
+            ids.append(row['id'])
+        if ids:
+            self.api._request('POST', '/v1/social/chatack', body={'ids': ids})
+
+    def poll_rooms(self):
+        if self._chat_delivery is None:
+            return
+        with self._lock:
+            rooms = list(self._chat_rooms.items())
+        for jid, after in rooms:
+            try:
+                rows = self._validate_messages(self._room_request(jid, 'messages', {'after': after}), channel=True)
+                for row in rows:
+                    with self._lock:
+                        if jid not in self._chat_rooms:
+                            break
+                    if row['sequence'] <= after:
+                        continue
+                    if self._chat_delivery({**row, 'room': jid}) is not True:
+                        break
+                    with self._lock:
+                        if jid in self._chat_rooms:
+                            self._chat_rooms[jid] = row['sequence']
+            except Exception as error:
+                if getattr(error, 'status', None) in (403, 404, 410):
+                    with self._lock:
+                        self._chat_rooms.pop(jid, None)
+                self.trace({'event': 'native_channel_chat_unavailable'})
 
     def command(self,action,body=None):
         # The action allowlist prevents path/query injection through native data.
@@ -114,6 +241,12 @@ class NativeSocial:
     def iq(self,element,host):
         """Return an IQ body, or None when this is not a social operation."""
         kind=element.get('type')
+        if kind == 'get' and CHAT_ROOM.fullmatch(element.get('to', '').split('/', 1)[0]):
+            if element.find('{http://jabber.org/protocol/disco#info}query') is not None:
+                return ('<query xmlns="http://jabber.org/protocol/disco#info">'
+                    '<identity category="conference" type="text" name="TWA Chat"/>'
+                    '<feature var="http://jabber.org/protocol/muc"/>'
+                    '<feature var="muc_membersonly"/></query>')
         query=element.find('{'+ROSTER+'}query')
         if query is not None:
             if kind=='get':return self.roster_xml(host)
@@ -211,9 +344,10 @@ class NativeSocial:
         self.trace({'event':'native_social_subscription','kind':kind,'decision':decision})
         return True
 
-    def start(self,publish):
+    def start(self,publish,*,deliver_chat=None):
         if self._thread is not None:raise RuntimeError('social_already_started')
         self._publish=publish
+        self._chat_delivery=deliver_chat
         self._thread=threading.Thread(target=self._run,name='native-social',daemon=True)
         try:self._thread.start()
         except Exception:
@@ -229,7 +363,12 @@ class NativeSocial:
                 self.command('get')
             except Exception as error:
                 self.trace({'event':'native_social_unavailable','error_type':type(error).__name__})
-            self._stop.wait(5)
+            try:
+                self.poll_messages()
+            except Exception:
+                self.trace({'event': 'native_chat_unavailable'})
+            self.poll_rooms()
+            self._stop.wait(2)
 
     def stop(self):
         self._stop.set()

@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from tools.player_native_payload import GAME_HASH
 
 GAME_SHA256S = frozenset({
     '541d91ecfd137cb8e325d906cf193846a6b07cf4b0c9cffafcf444794f9bf641',
@@ -18,8 +19,9 @@ GAME_SHA256S = frozenset({
     'f760ece7869a3e254376f927ee610675cab8112fafb502c6c18e90c30664fc0c',
     '884e30f841d6a1268b7cc918fa2d14b972f007ce593b957fd3d1ee93c75cbf0a',
     'b5d1547b720fd03f1e55e76e2d41b531d2d72e0b4a6270c73223018b8cd45e06',
+    GAME_HASH,
 })
-UI_SHA256 = '896693d11cd1b79f99df919856f446c95ef85888ee325c698361bae0e76c64c9'
+UI_SHA256 = '3a7916541268a328ba8b4a8f843197883ea0d727dfc07add58513f7ee4c0ca2b'
 
 # Integer arithmetic avoids loss of precision in signed-64 native counts and
 # keeps sorting exact even when displayed two-decimal means happen to match.

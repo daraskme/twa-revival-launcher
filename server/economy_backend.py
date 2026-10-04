@@ -32,6 +32,10 @@ from typing import Any, Protocol, runtime_checkable
 
 # The Worker's blob ceiling (private-server/src/profiles.ts PROFILE_BLOB_LIMIT).
 PROFILE_BLOB_LIMIT = 512 * 1024
+# The Worker's request ceiling (private-server/src/profiles.ts PROFILE_BODY_LIMIT).
+PROFILE_BODY_LIMIT = PROFILE_BLOB_LIMIT + 4096
+# Room kept for the request wrapper around the blob (at most 63 bytes).
+_REQUEST_WRAPPER_MARGIN = 256
 CLOUD_RAW_BLOB_LIMIT = 16 * 1024 * 1024
 CLOUD_ENVELOPE_KEY = "__twa_cloud_profile_codec__"
 SAVED_CONFLICT = "saved_conflict"
@@ -92,11 +96,30 @@ def _canonical_json(value: object) -> bytes:
         raise BackendError("invalid_state_json") from exc
 
 
+def _transport_json_size(value: object) -> int:
+    """Bytes of ``value`` framed as ``companion.api_client.ApiClient`` sends it."""
+    # ApiClient._request sends a plain ``json.dumps(body)``: ", " / ": "
+    # separators, and ensure_ascii escapes every non-ASCII character as
+    # \uXXXX (six bytes where UTF-8 needs three for Japanese text).  The
+    # Worker's readJson() bounds those raw request bytes by PROFILE_BODY_LIMIT
+    # before it ever measures the compact blob, so a blob that fits
+    # PROFILE_BLOB_LIMIT compactly can still be rejected as body_too_large.
+    try:
+        return len(json.dumps(value).encode("utf-8"))
+    except (TypeError, ValueError, UnicodeError, RecursionError) as exc:
+        raise BackendError("invalid_state_json") from exc
+
+
 def _cloud_encode_blob(state: dict) -> dict:
     raw = _canonical_json(state)
     if len(raw) > CLOUD_RAW_BLOB_LIMIT:
         raise BackendError("profile_raw_too_large")
-    if len(raw) <= PROFILE_BLOB_LIMIT:
+    # The blob must pass both Worker checks: its compact size (serializedSize)
+    # by PROFILE_BLOB_LIMIT, and the request bytes ApiClient frames for it by
+    # PROFILE_BODY_LIMIT.  The {schemaVersion, saved, blob} wrapper adds at
+    # most 63 bytes, so the framed blob keeps _REQUEST_WRAPPER_MARGIN spare.
+    if (len(raw) <= PROFILE_BLOB_LIMIT
+            and _transport_json_size(state) <= PROFILE_BODY_LIMIT - _REQUEST_WRAPPER_MARGIN):
         return state
     compressed = zlib.compress(raw, 9)
     if len(compressed) > PROFILE_BLOB_LIMIT:
@@ -105,7 +128,8 @@ def _cloud_encode_blob(state: dict) -> dict:
         "version": 1, "encoding": "zlib+base64", "rawBytes": len(raw),
         "data": base64.b64encode(compressed).decode("ascii"),
     }}
-    if len(_canonical_json(envelope)) > PROFILE_BLOB_LIMIT:
+    if (len(_canonical_json(envelope)) > PROFILE_BLOB_LIMIT
+            or _transport_json_size(envelope) > PROFILE_BODY_LIMIT - _REQUEST_WRAPPER_MARGIN):
         raise BackendError("profile_too_large")
     return envelope
 
@@ -254,6 +278,11 @@ class FakeProfileApi:
                     expected_saved: int) -> dict:
         self.puts += 1
         self._maybe_fail()
+        # readJson() bounds the raw request bytes before any field is checked;
+        # the real path maps its 413 body_too_large to this code.
+        request = {"schemaVersion": schema_version, "saved": saved, "blob": blob}
+        if _transport_json_size(request) > PROFILE_BODY_LIMIT:
+            raise BackendError("profile_body_too_large")
         if type(schema_version) is not int or type(saved) is not int or saved < 0:
             raise BackendError("invalid_saved")
         if not isinstance(blob, dict):
@@ -334,10 +363,72 @@ class CloudEconomyBackend:
             raise BackendError("invalid_saved")
         revision = max(native_saved, expected_saved + 1)
         encoded = _cloud_encode_blob(state)
-        result = self.profile_api.put_profile(
-            schema_version, revision, encoded, expected_saved)
+        try:
+            result = self.profile_api.put_profile(
+                schema_version, revision, encoded, expected_saved)
+        except BackendError as error:
+            if error.code != "profile_unreachable":
+                raise
+            result = self._recover_unreachable_write(
+                schema_version, revision, encoded, expected_saved, error)
         written = result.get("saved") if isinstance(result, dict) else None
         return written if type(written) is int and written >= 0 else revision
+
+    def _recover_unreachable_write(
+        self, schema_version: int, revision: int, encoded: dict,
+        expected_saved: int, original_error: BackendError,
+    ) -> dict:
+        """Resolve one ambiguous conditional profile write without blind replay.
+
+        A lost HTTP response can mean either that the Worker committed the PUT
+        or that it never received it. Read back first: accept only the exact
+        target row, retry once only while the original If-Match value remains
+        current, and leave any competing/unknown state fail-closed.
+        """
+
+        def exact_target(row: object) -> bool:
+            return (isinstance(row, dict)
+                    and row.get("schemaVersion") == schema_version
+                    and row.get("saved") == revision
+                    and row.get("blob") == encoded)
+
+        def inspect() -> dict | None:
+            try:
+                return self.profile_api.get_profile()
+            except BackendError:
+                raise original_error from None
+
+        def still_expected(row: object) -> bool:
+            return ((row is None and expected_saved == 0)
+                    or (isinstance(row, dict)
+                        and type(row.get("saved")) is int
+                        and row.get("saved") == expected_saved))
+
+        def conflict_or_original(row: object) -> None:
+            current_saved = row.get("saved") if isinstance(row, dict) else None
+            if type(current_saved) is int and current_saved >= 0:
+                raise BackendConflict("profile_conflict", saved=current_saved) from None
+            raise original_error
+
+        current = inspect()
+        if exact_target(current):
+            return {"saved": revision}
+        if not still_expected(current):
+            conflict_or_original(current)
+
+        try:
+            result = self.profile_api.put_profile(
+                schema_version, revision, encoded, expected_saved)
+        except BackendError as retry_error:
+            if retry_error.code != "profile_unreachable":
+                raise
+            current = inspect()
+            if exact_target(current):
+                return {"saved": revision}
+            if not still_expected(current):
+                conflict_or_original(current)
+            raise original_error from None
+        return result
 
 
 class _ApiClientProfileApi:
@@ -419,6 +510,7 @@ __all__ = [
     "FakeProfileApi",
     "FileEconomyBackend",
     "PROFILE_BLOB_LIMIT",
+    "PROFILE_BODY_LIMIT",
     "ProfileApi",
     "SAVED_CONFLICT",
     "build_api_client",

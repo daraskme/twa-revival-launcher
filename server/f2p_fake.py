@@ -715,11 +715,11 @@ def build_validation(
                 require_uint64(row["item_id"]) for row in candidates
             )
         # Type 19 is the unit-trainable junction itself.  Pre-authorize every
-        # enabled additional row beneath only its own unit root; commander
+        # selectable additional/default row beneath only its own unit root; commander
         # type-6 talent levels deliberately remain a separate namespace.
         if verified_unit_abilities is not None:
             for row in verified_unit_abilities["items"]:
-                if row["mode"] != "additional":
+                if row["mode"] not in {"additional", "default"}:
                     continue
                 unit = eligible_units.get(row["unit"])
                 if unit is None:
@@ -983,7 +983,7 @@ def build_catalogue(
         load_native_unit_abilities(), native,
     )
     for row in unit_abilities["items"]:
-        if row["mode"] != "additional":
+        if row["mode"] not in {"additional", "default"}:
             continue
         for action in ("equip", "unequip"):
             options.append({
@@ -1036,6 +1036,22 @@ def build_catalogue(
     if len({row["id"] for row in options}) != len(options):
         raise ValueError("Canonical faction/unit/currency keys are not unique")
     return {"purchase_options": options, "po_package_map": []}
+
+
+def native_full_strength(unit: dict) -> int:
+    """Native replenishment quantity, separate from the model's troop count.
+
+    The nine shipped war-elephant definitions require 100 at readiness RVA
+    C484A0, although main_units.num_men is 4. Sending the crew count leaves
+    them depleted. Other unit families use their native num_men unchanged.
+    This affects the trusted initial profile, never battle damage/results.
+    """
+    num_men = unit["num_men"]
+    if type(num_men) is not int or not 0 < num_men < 2**31:
+        raise ValueError(f"Invalid initial troop strength: {unit['key']} / {num_men!r}")
+    if unit.get("metadata", {}).get("squad_role_string") == "war_elephant":
+        return 100
+    return num_men
 
 
 def build_profile(
@@ -1416,18 +1432,17 @@ def build_profile(
             # It is separate from the canonical item ID and cannot collide.
             instance_id = stable_instance(f"revival:starter:{commander['key']}:{slot}")
             records.append([require_uint64(commander["item_id"]), item_id, instance_id, 1])
-            num_men = unit["num_men"]
-            if type(num_men) is not int or not 0 < num_men < 2**31:
-                raise ValueError(f"Invalid initial troop strength: {unit['key']} / {num_men!r}")
-            equipped_strengths.append((instance_id, require_uint64(unit["strength_item_id"]), num_men))
+            strength = native_full_strength(unit)
+            equipped_strengths.append((instance_id, require_uint64(unit["strength_item_id"]), strength))
     # A strength record belongs to each equipped unit INSTANCE, not to its
     # shared root unlock or to the commander. Native child type 4 at BEC25A
-    # passes its quantity directly to C59630 -> unit+108; C478A0 requires
-    # that quantity to reach the unit's num_men before enabling Play.
+    # passes its quantity to C5A230 (RVA) -> unit+108. C484A0 compares it
+    # with the definition's required strength. Elephants use 100, not their
+    # four crew members. Keep the native readiness check and model count intact.
     # Allocate these only after all starters to preserve their existing IDs.
-    for unit_instance, strength_item, num_men in equipped_strengths:
+    for unit_instance, strength_item, strength in equipped_strengths:
         instance_id = stable_instance(f"revival:starter-strength:{unit_instance}")
-        records.append([unit_instance, strength_item, instance_id, num_men])
+        records.append([unit_instance, strength_item, instance_id, strength])
     # The whole profile graph's identity.  ``user_id=None`` keeps the legacy
     # single-user lab value unless ``bind_identity`` resolved a real player.
     profile_user_id = active_native_user_id() if user_id is None else user_id

@@ -127,6 +127,17 @@ class WorkerPvpApi:
     def get_active_battle(self) -> dict:
         return self._call(self._client.get_active_battle)
 
+    def prepared_battle_terminal(self, prepared, generation) -> bool:
+        reader = getattr(self._client, 'get_battle_with_admission', self._client.get_battle)
+        response = self._call(lambda: reader(prepared.battle_id))
+        battle = response.get('battle')
+        if (not isinstance(battle, dict)
+                or battle.get('battleId') != prepared.battle_id
+                or battle.get('assignmentId') != prepared.assignment_id
+                or type(response.get('admissionReleased')) is not bool):
+            raise PvpCoordinatorError('invalid_battle_release_receipt')
+        return response['admissionReleased']
+
     def relay_ticket(self, battle_id: str) -> dict:
         return self._call(lambda: self._client.relay_ticket(battle_id))
 
@@ -172,11 +183,11 @@ def canonical_battle_key_hex(value: object) -> str:
 
 
 def _roster_policy(value: object, assignment_id: str, mode: str = 'pvp') -> dict | None:
-    """Validate frozen CPU-fill policy; v2 preserves authoritative group teams."""
+    """Validate frozen CPU-fill policy; v2+ preserve authoritative group teams."""
     if value is None:
         return None
     version = value.get('version') if isinstance(value, dict) else None
-    if type(version) is not int or version not in (1, 2):
+    if type(version) is not int or version not in (1, 2, 3, 4, 5):
         raise PvpCoordinatorError('invalid_roster_policy')
     expected = {
         'version': version, 'totalSeats': 20, 'seatsPerTeam': 10,
@@ -199,7 +210,7 @@ def _valid_team(team: object, seat: int, mode: str, policy: dict | None) -> bool
         return False
     if mode == 'pve':
         return team == 0
-    return policy is not None and policy['version'] == 2 or team == seat % 2
+    return policy is not None and policy['version'] in (2, 3, 4, 5) or team == seat % 2
 
 
 def _participants(view: object, native_user_id: str,
@@ -590,6 +601,7 @@ class PvpCoordinator:
         self._recovery_checked = recovery_profile_source is None
         self._recovery_next_poll = 0.0
         self._recovery_failures = 0
+        self._next_battle_release_poll = 0.0
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._lock = threading.RLock()
@@ -673,9 +685,19 @@ class PvpCoordinator:
         if not self._recovery_checked and self.state == 'idle':
             if not self._recovery_ready():
                 return self.state
+            # The native client must first enter matchmaking itself.  A
+            # startup-only XMPP connection can receive battle_ready while the
+            # game is still in the hangar; its later Play is an idempotent
+            # retry of the already-announced queue and cannot notify again.
+            # Waiting for the local native Play intent also retains the old
+            # frozen seat as the first Worker query, before any new join.
+            generation = self._matchmaking.pvp_queue_generation
+            if (generation is None
+                    or self._matchmaking.lab_state.get('queue_state') != 'matching'):
+                return self.state
             if self._clock() < self._recovery_next_poll:
                 return self.state
-            if self._recover_active_battle() is not False:
+            if self._recover_active_battle(generation) is not False:
                 return self.state
         lab = self._matchmaking.lab_state
         queue_state = lab.get('queue_state')
@@ -711,7 +733,7 @@ class PvpCoordinator:
             self.next_poll_seconds = DEFAULT_POLL_SECONDS
         return self.state
 
-    def _recover_active_battle(self) -> bool | None:
+    def _recover_active_battle(self, generation) -> bool | None:
         """Re-adopt only this account's unfinished, server-frozen public seat."""
         try:
             view = self._api.get_active_battle()
@@ -727,6 +749,12 @@ class PvpCoordinator:
             self._recovery_next_poll = self._clock() + self.next_poll_seconds
             if self._recovery_failures == 1:
                 self._emit('companion_pvp_process_recovery_retry', reason=error.code)
+            return None
+        # A native Cancel or another Play may have replaced this queue while
+        # the Worker read was in flight. Re-discover for the new generation on
+        # the next step; do not consume or announce the stale result.
+        if (not self._matchmaking.is_current_pvp_generation(generation)
+                or self._matchmaking.lab_state.get('queue_state') != 'matching'):
             return None
         self._recovery_failures = 0
         self._recovery_next_poll = 0.0
@@ -761,14 +789,11 @@ class PvpCoordinator:
         mine = next(seat for seat in seats if seat['user_id'] == self._user)
         if mine['loadout'] is None:
             raise PvpCoordinatorError('restart_loadout_unavailable')
-        lab = self._matchmaking.lab_state
-        if lab.get('queue_state') not in (None, 'idle'):
-            # A local Play intent can only be replaced before it was assigned.
-            if lab.get('queue_state') != 'matching':
-                raise PvpCoordinatorError('restart_queue_busy')
-            self._matchmaking.abort_pvp('recover_existing_battle')
         profile = self._recovery_profile_source()
-        self._matchmaking.enter_party_attempt(profile, mode=mode, ruleset=ruleset, loadout=mine['loadout'])
+        if not self._matchmaking.enter_party_attempt(
+                profile, mode=mode, ruleset=ruleset, loadout=mine['loadout'],
+                expected_generation=generation):
+            return None
         self._mode, self._ruleset = mode, ruleset
         self._queue_started = self._clock()
         self._prepare_claim(battle, assignment, policy, fresh_process_restart=True)
@@ -797,7 +822,31 @@ class PvpCoordinator:
             self._matchmaking.abort_pvp('battle_expired')
             self._release('battle_expired')
             return True
-        return self._unstarted_party_terminal(prepared)
+        return self._remote_battle_terminal(prepared) or self._unstarted_party_terminal(prepared)
+
+    def _remote_battle_terminal(self, prepared) -> bool:
+        """Release only after the Worker proves this transport cannot resume."""
+        terminal = getattr(self._api, 'prepared_battle_terminal', None)
+        generation = self._matchmaking.pvp_queue_generation
+        if not callable(terminal) or generation is None or self._clock() < self._next_battle_release_poll:
+            return False
+        self._next_battle_release_poll = self._clock() + 5.0
+        try:
+            confirmed = terminal(prepared, generation)
+        except (PvpCoordinatorError, NativeLobbyError):
+            # Network failures and old Workers without this receipt never
+            # imply that a live or reconnectable battle has ended.
+            return False
+        if confirmed is not True:
+            return False
+        with self._phase_lock:
+            if (self._phase_prepared is not prepared
+                    or not self._matchmaking.abort_prepared_pvp_generation(
+                        generation, prepared.battle_id)):
+                return False
+            self._phase_prepared = None
+        self._release('battle_admission_released', generation=generation)
+        return True
 
     def _unstarted_snapshot(self, prepared) -> bool:
         """Require readable, own battle state which has not crossed READY."""

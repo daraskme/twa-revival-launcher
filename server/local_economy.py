@@ -456,7 +456,7 @@ class LocalEconomy:
         self.unit_abilities_by_db_key = {
             row["db_key"]: copy.deepcopy(row)
             for row in unit_abilities["items"]
-            if row["mode"] == "additional"
+            if row["mode"] in {"additional", "default"}
         }
         self.unit_abilities_by_unit: dict[str, list[dict]] = {
             key: [] for key in self.units
@@ -3420,6 +3420,43 @@ class LocalEconomy:
                                or advance_native_binding),
             )
 
+    def bind_unit_ability_pair(
+        self, operation_id: str, unit_key: str, db_keys: tuple[str, str],
+    ) -> dict:
+        """Persist both native Swap bindings in one durable operation.
+
+        Initial default skills can exist only in the native WAD until their
+        first reorder. That gesture emits two equip offers rather than an
+        unequip/equip replacement. Hotkey positions remain native UI storage.
+        """
+        if (not isinstance(db_keys, tuple) or len(db_keys) != 2
+                or any(not isinstance(key, str) for key in db_keys)
+                or db_keys[0] == db_keys[1]):
+            raise EconomyError("invalid_unit_ability_swap")
+        rows = [self.unit_abilities_by_db_key.get(key) for key in db_keys]
+        if any(row is None for row in rows):
+            raise EconomyError("unknown_unit_ability")
+        if any(row["unit"] != unit_key for row in rows):
+            raise EconomyError("unit_ability_unit_mismatch")
+
+        def apply(state: dict) -> dict:
+            if unit_key not in state["units"]:
+                raise EconomyError("unit_not_owned")
+            for row in rows:
+                if row["alias_unit"] and row["alias_unit"] not in state["units"]:
+                    raise EconomyError("unit_ability_required_unit_not_owned")
+            selected = sorted(set(state["unit_abilities"][unit_key]) | set(db_keys))
+            state["unit_abilities"][unit_key] = selected
+            return {"unit": unit_key, "bound_abilities": list(db_keys),
+                    "abilities": list(selected)}
+
+        # Even an already-owned pair needs a fresh watermark to distinguish
+        # the next deliberate native binding gesture from this exact retry.
+        return self._run_operation(
+            operation_id, "bind_unit_ability_pair",
+            {"unit": unit_key, "abilities": list(db_keys)}, apply,
+        )
+
     def equip_unit_ability(
         self,
         operation_id: str,
@@ -3533,6 +3570,54 @@ class LocalEconomy:
                 normalized_operation, "select_consumable", request, apply,
                 advance_saved=changed,
             )
+
+    def select_consumables(
+        self, operation_id: str, commander_key: str, deployed_slot: int,
+        consumable_db_keys: list[str], *, expected_saved: int,
+    ) -> dict:
+        """Install one native multi-consumable purchase in a single commit."""
+        if type(deployed_slot) is not int or not 0 <= deployed_slot < 3:
+            raise EconomyError("invalid_deployed_slot")
+        if (not isinstance(consumable_db_keys, list)
+                or not 2 <= len(consumable_db_keys) <= 3
+                or any(not isinstance(key, str) for key in consumable_db_keys)
+                or len(set(consumable_db_keys)) != len(consumable_db_keys)):
+            raise EconomyError("invalid_consumable_batch")
+        keys = list(consumable_db_keys)
+        request = {"commander": commander_key, "deployed_slot": deployed_slot,
+                   "consumables": keys, "expected_saved": expected_saved}
+
+        def apply(state: dict) -> dict:
+            if type(expected_saved) is not int or state["saved"] != expected_saved:
+                raise EconomyError("consumable_state_changed")
+            commander = state["commanders"].get(commander_key)
+            if commander is None:
+                raise EconomyError("commander_not_owned")
+            unit_key = commander["equipped_units"][deployed_slot]
+            capacity = self.units[unit_key].get("num_consumable_slots")
+            if type(capacity) is not int or len(keys) > capacity:
+                raise EconomyError("consumable_slot_unavailable")
+            selected = state["consumables"][commander_key][deployed_slot]
+            added = []
+            for key in keys:
+                if key in selected.values():
+                    continue
+                empty = next((str(slot) for slot in range(capacity)
+                              if str(slot) not in selected), None)
+                if empty is None:
+                    raise EconomyError("consumable_slot_ambiguous")
+                selected[empty] = key
+                added.append(key)
+            # Validate the complete candidate before _run_operation performs
+            # its one durable write. A bad last row cannot save earlier rows.
+            self._validate_consumable_selections(unit_key, selected)
+            return {"commander": commander_key, "deployed_slot": deployed_slot,
+                    "unit": unit_key, "consumables": keys, "added": added,
+                    "saved_before": expected_saved}
+
+        return self._run_operation(
+            operation_id, "select_consumables", request, apply,
+        )
 
     def clear_consumable(
         self,

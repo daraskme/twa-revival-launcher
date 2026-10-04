@@ -202,7 +202,9 @@ def loopback_resolves(host: str) -> bool:
 
 
 def build_plan(args: argparse.Namespace, native_user_id: str) -> BridgePlan:
-    preset = f"{args.ruleset}-{args.mode}"
+    public_pvp_only = args.native_five_mode_selector and args.economy_backend == "cloud"
+    mode = 'pvp' if public_pvp_only else args.mode
+    preset = f"{args.ruleset}-{mode}"
     if preset not in probe.BATTLE_MODE_PRESETS:
         raise BridgeError(f"unsupported battle mode preset {preset}")
     battle_state = str(Path(args.battle_state).resolve())
@@ -236,7 +238,7 @@ def build_plan(args: argparse.Namespace, native_user_id: str) -> BridgePlan:
             "--trace", str(Path(args.relay_trace).resolve()),
         )
     return BridgePlan(
-        mode=args.mode,
+        mode=mode,
         ruleset=args.ruleset,
         battle_mode_preset=preset,
         native_user_id=native_user_id,
@@ -834,7 +836,7 @@ def _on_ready(runtime: BridgeRuntime, trace):
                             trace({'event': 'native_recent_projection_skipped',
                                    'reason': 'publisher_failed'})
 
-                runtime.social.start(publish_social)
+                runtime.social.start(publish_social, deliver_chat=xmpp_hub.send_chat)
         if matchmaking is not None and xmpp_hub is not None:
             runtime.announcer = AutoAnnouncer(
                 matchmaking, xmpp_hub, trace=trace,
@@ -1213,8 +1215,9 @@ def main(argv: list[str] | None = None, *, lifecycle_stop=None,
             before_shutdown=lambda: _shutdown_runtime(runtime),
             stop=runtime.stop,
             pvp_enabled=(plan.mode == "pvp" or plan.public_dual_mode),
-            pve_enabled=(plan.mode == "pve" or plan.public_dual_mode),
-            cloud_coop_pve=(runtime.pvp_api is not None and (plan.mode == "pve" or plan.public_dual_mode)),
+            pve_enabled=(plan.mode == "pve" and not plan.public_dual_mode),
+            public_pvp_only=plan.public_dual_mode,
+            cloud_coop_pve=(runtime.pvp_api is not None and plan.mode == "pve" and not plan.public_dual_mode),
         )
     except KeyboardInterrupt:  # pragma: no cover - interactive shutdown
         pass

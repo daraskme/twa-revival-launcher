@@ -8,8 +8,10 @@ from __future__ import annotations
 import ipaddress
 import hashlib
 import json
+import os
 import re
 import time
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -187,42 +189,59 @@ class PlayerService:
         except OSError:
             pass  # A display-cache failure cannot invalidate a verified login.
 
-    def _ensure_session(self):
+    def _session_or_remembered(self):
         try:
-            return self._session()
+            return self._session(), None
         except PlayerReleaseError:
             previous = self._remembered_binding()
             if (previous is None or previous["expiresAt"] > int(time.time())
                     or self._resume_blocked()):
                 raise PlayerReleaseError("login_required") from None
-        from .eos.session import EosSession, EosLoginError, EosTimeoutError
+        return None, previous
+
+    def _resume_expired_session(self, backend, previous):
+        from .eos.session import EosLoginError, EosTimeoutError
         from .config import SessionChangedError
+        try:
+            token = backend.login("persistent", allow_create_connect=False)
+        except EosTimeoutError:
+            raise
+        except EosLoginError:
+            # No UI/portal fallback: the user must explicitly sign in.
+            raise PlayerReleaseError("login_required") from None
+        if token.puid != previous["puid"]:
+            raise PlayerReleaseError("login_required")
+        api = ApiClient(self.config.api_base_url, self.config.client_version)
+        session = exchange_connect_token(api, token.token, previous["puid"],
+            display_name=None, eos_expires_at=token.expires_at)
+        verified = self._verified_name(api.me(), previous["puid"])
+        session.update(apiBaseUrl=self.config.api_base_url, createdAt=int(time.time()))
+        if self._resume_blocked():
+            raise PlayerReleaseError("login_required")
+        try:
+            save_session(self.config, session, expected_session=previous)
+        except SessionChangedError:
+            raise PlayerReleaseError("login_required") from None
+        self._cache_name(session, verified)
+        return self._session(), token
+
+    def _ensure_session(self):
+        snapshot, previous = self._session_or_remembered()
+        if previous is None:
+            return snapshot
+        from .eos.session import EosSession
         eos = self.release.eos
         with EosSession(self.config.repo_root / "runtime" / "EOSSDK-Win64-Shipping.dll",
                 eos["productId"], eos["sandboxId"], eos["deploymentId"],
                 eos["clientId"], eos["clientSecret"], call_timeout_s=30.0) as backend:
-            try:
-                token = backend.login("persistent", allow_create_connect=False)
-            except EosTimeoutError:
-                raise
-            except EosLoginError:
-                # No UI/portal fallback: the user must explicitly sign in.
-                raise PlayerReleaseError("login_required") from None
-            if token.puid != previous["puid"]:
-                raise PlayerReleaseError("login_required")
-            api = ApiClient(self.config.api_base_url, self.config.client_version)
-            session = exchange_connect_token(api, token.token, previous["puid"],
-                display_name=None, eos_expires_at=token.expires_at)
-            verified = self._verified_name(api.me(), previous["puid"])
-            session.update(apiBaseUrl=self.config.api_base_url, createdAt=int(time.time()))
-            if self._resume_blocked():
-                raise PlayerReleaseError("login_required")
-            try:
-                save_session(self.config, session, expected_session=previous)
-            except SessionChangedError:
-                raise PlayerReleaseError("login_required") from None
-        self._cache_name(session, verified)
-        return self._session()
+            return self._resume_expired_session(backend, previous)[0]
+
+    def _prepare_launch_session(self, backend):
+        """Use the keeper's EOS context; return its first verified proof if resumed."""
+        _, previous = self._session_or_remembered()
+        if previous is None:
+            return None
+        return self._resume_expired_session(backend, previous)[1]
 
     def sign_in(self, name: str | None, *, method: str = "account_portal"):
         if method not in ("account_portal", "persistent"):
@@ -321,7 +340,16 @@ class PlayerService:
         if launcher['restartRequired']:
             return launcher
         from .startup_gate import check_startup
-        result = check_startup(self.config, "release", public_native=True)
+        from .client_lock import client_operation_lock
+        from .native_update import migrate_native
+        # Windows named mutexes are recursive for the owning thread. The
+        # signed game updater may acquire the same lock inside check_startup.
+        # POSIX flock is not recursive; native migration still owns the lock
+        # around its complete filesystem transaction in portable tests.
+        boundary = client_operation_lock(self.config.client_dir) if os.name == 'nt' else nullcontext()
+        with boundary:
+            migrate_native(self.config)
+            result = check_startup(self.config, "release", public_native=True)
         if not result.allow_launch:
             raise PlayerReleaseError(result.code.value)
         return {"version": result.version}
@@ -336,14 +364,19 @@ class PlayerService:
         from tools.loopback_certificate import unresolved_loopback_hosts
         if unresolved_loopback_hosts():
             raise PlayerReleaseError("loopback_dns_missing")
+        from .client_lock import client_operation_lock
+        from .native_update import migrate_native
         from .native_launch import run_authenticated_launch
         from .player_session import maintain_player_session
         # Run until the owned Arena exits. The desktop must not apply a five
         # minute subprocess timeout to this lifecycle.
-        self._ensure_session()
-        with maintain_player_session(self.release) as keeper:
-            code = run_authenticated_launch(self.config, self._session(), locale=locale,
-                battle_mode="pvp", public_native=True, on_tick=keeper.poll)
+        boundary = client_operation_lock(self.config.client_dir) if os.name == 'nt' else nullcontext()
+        with boundary:
+            migrate_native(self.config)
+            with maintain_player_session(self.release,
+                    prepare_session=self._prepare_launch_session) as keeper:
+                code = run_authenticated_launch(self.config, self._session(), locale=locale,
+                    battle_mode="pvp", public_native=True, on_tick=keeper.poll)
         if code != 0:
             raise PlayerReleaseError("game_exited_with_error")
         return {"finished": True}

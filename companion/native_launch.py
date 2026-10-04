@@ -1,7 +1,7 @@
 """Fail-closed authenticated Arena launch orchestration.
 
-This module owns process lifetime and ordering only.  Copied-client mutation is
-delegated to ``launch_preparation`` and the bridge remains owned by
+This module owns process lifetime and ordering only. Copied-client mutation is
+delegated to the preparation and renderer compatibility helpers. The bridge remains owned by
 ``launcher.start_bridge``.  Importing this module cannot start either one.
 """
 from __future__ import annotations
@@ -18,6 +18,7 @@ from contextlib import AbstractContextManager
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping, Protocol
+from tools.loopback_certificate import LoopbackCertificateError
 
 from .api_client import normalize_api_base_url
 from .client_lock import client_operation_lock
@@ -30,7 +31,7 @@ from .native_helper_protocol import (
     PROTOCOL as HELPER_PROTOCOL,
     proof_matches as helper_proof_matches,
 )
-from .startup_gate import StartupResult, check_startup
+from .startup_gate import StartupCode, StartupResult, check_startup
 
 _TOKEN_RE = re.compile(r"^[a-f0-9]{64}$")
 _PUID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -206,7 +207,8 @@ class _OwnedArena:
         nonce = secrets.token_hex(32)
         binding = dict(readiness)
         if set(binding) != {
-                "arena_pid", "specialization_mode", "arena_path", "game_path",
+                "arena_pid", "specialization_mode", "arcani_slot_fix_mode",
+                "arena_path", "game_path",
                 "game_sha256"}:
             raise NativeLaunchError("invalid owned helper readiness binding")
         start = {
@@ -218,7 +220,8 @@ class _OwnedArena:
         }
         if set(start) != {
                 "protocol", "command", "nonce", "arena_pid",
-                "specialization_mode", "arena_path", "game_path",
+                "specialization_mode", "arcani_slot_fix_mode",
+                "arena_path", "game_path",
                 "game_sha256", "unit_control_capability", "native_user_id",
                 "session_sha256"}:
             raise NativeLaunchError("invalid owned helper readiness binding")
@@ -672,7 +675,24 @@ def _default_dependencies(
     def prepare(config, plan):
         # The lifecycle already owns the client lock. Apply after the startup
         # updater and before Arena reads either selector or the text overlay.
+        from tools.loopback_certificate import ensure_certificate
+        ensure_certificate(config.repo_root / 'server' / 'certs')
         apply_launch_language(config, locale)
+        if public_native:
+            from .renderer_probe import probe_renderer
+            from .texture_memory_compat import reconcile
+            try:
+                decision = probe_renderer().decision
+            except Exception:
+                decision = "unknown"
+            outcome = reconcile(config, decision)
+            profile_log = DiagnosticLog("companion", state_dir=config.state_dir,
+                                        repo_root=config.repo_root)
+            try:
+                profile_log.event("renderer_profile", "prepare",
+                                  renderer_mode=outcome["mode"])
+            finally:
+                profile_log.close()
         return prepare_authenticated_client(config, plan)
 
     return LaunchDependencies(
@@ -740,7 +760,8 @@ def _validate_supported_roots(config: Config) -> None:
             "native helper supports only the copied client under this repository")
 
 
-def _unit_drag_command(config: Config, arena_pid: int, output: Path) -> tuple[str, ...]:
+def _unit_drag_command(config: Config, arena_pid: int, output: Path, *,
+                       public_pvp_only: bool = False) -> tuple[str, ...]:
     if type(arena_pid) is not int or arena_pid <= 0:
         raise NativeLaunchError("owned Arena PID is invalid")
     return (
@@ -748,7 +769,8 @@ def _unit_drag_command(config: Config, arena_pid: int, output: Path) -> tuple[st
         str(config.repo_root / "tools" / "unit_drag_bridge.py"),
         "--pid", str(arena_pid), "--output", str(output),
         "--seconds", "31536000", "--specialization-mode", "off",
-    )
+        "--arcani-slot-fix", "enabled",
+    ) + (("--public-pvp-only",) if public_pvp_only else ())
 
 
 def _unit_drag_readiness(config: Config, arena_pid: int) -> dict[str, object]:
@@ -765,6 +787,7 @@ def _unit_drag_readiness(config: Config, arena_pid: int) -> dict[str, object]:
     return {
         "arena_pid": arena_pid,
         "specialization_mode": "off",
+        "arcani_slot_fix_mode": "enabled",
         "arena_path": str(arena),
         "game_path": str(game),
         "game_sha256": digest,
@@ -842,7 +865,12 @@ def run_authenticated_launch(
                         or not gate.version:
                     code = (gate.code.value if isinstance(gate, StartupResult)
                             else "invalid")
-                    raise NativeLaunchError(f"startup gate blocked launch ({code})")
+                    detail = (
+                        f": {gate.message}"
+                        if isinstance(gate, StartupResult)
+                        and gate.code == StartupCode.INCOMPATIBLE_GAME_NATIVE else ""
+                    )
+                    raise NativeLaunchError(f"startup gate blocked launch ({code}){detail}")
                 launch_config = replace(config, client_version=gate.version)
                 diagnostic.refresh_versions(client_version=gate.version)
                 revalidate_session(launch_config, snapshot)
@@ -883,7 +911,8 @@ def run_authenticated_launch(
                 helper_output = Path(bridge.run_dir) / "unit-drag.jsonl"
                 operation = "helper_start"
                 arena.start_helper(
-                    _unit_drag_command(launch_config, arena.pid, helper_output),
+                    _unit_drag_command(launch_config, arena.pid, helper_output,
+                                       public_pvp_only=public_native),
                     cwd=launch_config.repo_root, env=prepared.env,
                     readiness=_unit_drag_readiness(launch_config, arena.pid),
                     control_binding=control_binding,
@@ -960,10 +989,11 @@ def run_authenticated_launch(
             primary = error
     if primary is not None:
         if not isinstance(primary, (KeyboardInterrupt, SystemExit)):
-            diagnostic.event("launch_failed", operation, error=primary, code="game_launch_failed",
+            diagnostic.event("launch_failed", operation, error=primary,
+                code=(primary.code if isinstance(primary, LoopbackCertificateError) else "game_launch_failed"),
                 exit_code=exit_code, crash=True)
         diagnostic.close()
-        if isinstance(primary, (NativeLaunchError, KeyboardInterrupt, SystemExit)):
+        if isinstance(primary, (NativeLaunchError, LoopbackCertificateError, KeyboardInterrupt, SystemExit)):
             raise primary
         raise NativeLaunchError("authenticated launch failed") from None
     if exit_code is None:

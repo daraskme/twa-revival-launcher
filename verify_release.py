@@ -1,16 +1,17 @@
-"""Check that this repository and a downloaded ZIP are exactly TWA Revival launcher 0.2.25.
+"""Verify the published source subset of TWA Revival launcher 0.2.43.
 
 Usage (Python 3.8+, standard library only, no network access):
 
     python -I verify_release.py
-    python -I verify_release.py --zip path\\to\\TWA-Launcher-0.2.25.zip
+    python -I verify_release.py --zip path\\to\\TWA-Launcher-0.2.43.zip
 
 This script is self-contained: it never imports or runs code from this repository
 (-I keeps Python from importing anything from this folder).
 It checks that
-  * the files here are exactly the release's code files, with no extra files;
-  * the two update manifests carry valid Ed25519 signatures from the pinned release
-    key (the same key as companion/trusted_keys.py), and list exactly those files;
+  * the files here are the release's published code subset, with no extra files;
+  * explicitly excluded game-data catalogs and four source files are absent;
+  * the original stable manifest has a valid Ed25519 signature from the pinned
+    release key and accounts for both published and excluded update files;
   * with --zip: the ZIP's SHA-256 equals the published value, it has no duplicate
     entries, every file in it matches the published SHA-256 list, and the
     non-secret fields of player-release.json have the published values.
@@ -30,11 +31,11 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 
 HERE = Path(__file__).resolve().parent
-VERSION = '0.2.25'
+VERSION = '0.2.43'
 ORIGIN = 'https://downloads.darask.me'
 RELEASE_KEY_ID = '2751aa46b0af141c'
 RELEASE_PUBLIC_KEY = bytes.fromhex('b6f75c29cdefdb770c0379d1195694e2696c20421ce305b0400e9193dabda4a5')
-ZIP_SHA256 = 'f06432b45e4321d15cb3f7356ab02c7dcf8525c9052a6b80ba85f669d50b252a'
+ZIP_SHA256 = 'ff9dd3e96efbd2fbfd0ebf3536d1274c5eac93fd598d61659f4ce35a0ad7622a'
 # Non-secret fields of player-release.json in the published ZIP. The EOS client
 # secret is required by Epic's SDK; it is checked for presence only, never shown.
 PLAYER_RELEASE = {
@@ -47,8 +48,20 @@ PLAYER_RELEASE = {
         'clientId': 'xyza7891FqCrz4CmiPl3NT9yiBBIiq4T',
     },
 }
-REPO_EXTRAS = {'README.md', 'verify_release.py', '.gitattributes', 'manifests/launcher-stable.json',
-               'manifests/launcher-beta.json', 'manifests/player-core-manifest.json'}
+REPO_EXTRAS = {'README.md', 'PUBLISHING.md', 'verify_release.py', '.gitattributes', '.gitignore',
+               'manifests/launcher-stable.json', 'manifests/player-core-manifest.json'}
+EXCLUDED_RELEASE_FILES = {
+    'catalog/catalog.json', 'catalog/f2p_item_ids.json',
+    'catalog/native_battle_consumables.json', 'catalog/native_battle_maps.json',
+    'catalog/native_commander_talents.json', 'catalog/native_hangar.json',
+    'catalog/native_matchmaking.json', 'catalog/native_postbattle_map_aliases.json',
+    'catalog/native_unit_abilities.json', 'catalog/native_unit_equipment.json',
+    'catalog/official_mappings.json',
+    # Source files embedding original instruction sequences or catalog mappings.
+    'tools/build_native_specialization_binding.py', 'tools/native_fixed_family_mapper.py',
+    'server/local_stack.py', 'server/native_postbattle_maps.py',
+}
+BOOTSTRAP_FILES = {'Launch TWA.cmd', 'tools/player_bootstrap.py', 'config/preferences.template.txt'}
 
 # --- Ed25519 verification (RFC 8032, section 6 reference algorithm) ---------------
 _P = 2 ** 255 - 19
@@ -143,10 +156,15 @@ def check_manifest(name, channel, code_rows, problems):
     if (manifest.get('kind'), manifest.get('channel'), manifest.get('version')) != ('launcher', channel, VERSION):
         problems.append(f'{name}: not the {channel} launcher manifest for {VERSION}')
     by_path = {row['path']: row for row in code_rows}
+    signed_paths = [row['path'] for row in manifest['files']]
+    if len(signed_paths) != len(set(signed_paths)):
+        problems.append(f'{name}: duplicate file paths')
+    if set(signed_paths) != set(by_path) - BOOTSTRAP_FILES:
+        problems.append(f'{name}: signed file set differs from the full release update set')
     for row in manifest['files']:
         code = by_path.get(row['path'])
         if code is None or (code['sha256'], code['size']) != (row['sha256'], row['size']):
-            problems.append(f'{name}: {row["path"]} differs from the files here')
+            problems.append(f'{name}: {row["path"]} differs from the release file list')
         if row.get('url') != f'{ORIGIN}/v1/update/object/launcher/{VERSION}/{row["path"]}':
             problems.append(f'{name}: unexpected download URL for {row["path"]}')
     print(f'Signature OK: {name} ({channel}, {len(manifest["files"])} files) is signed by release key {RELEASE_KEY_ID}.')
@@ -154,27 +172,44 @@ def check_manifest(name, channel, code_rows, problems):
 
 def check_repository(problems):
     core = json.loads((HERE / 'manifests/player-core-manifest.json').read_bytes())
+    paths = [row['path'] for row in core['files']]
+    if len(paths) != len(set(paths)) or len(paths) != len({p.casefold() for p in paths}):
+        raise ValueError('duplicate paths in the release file list')
+    for path in paths:
+        if not isinstance(path, str) or '\\' in path or ':' in path or path.startswith('/') or any(
+                part in ('', '.', '..') for part in path.split('/')):
+            raise ValueError('unsafe path in the release file list')
     code_rows = [row for row in core['files'] if row.get('source') == 'code']
-    expected = {row['path'] for row in code_rows} | REPO_EXTRAS
+    code_paths = {row['path'] for row in code_rows}
+    if not EXCLUDED_RELEASE_FILES <= code_paths or not BOOTSTRAP_FILES <= code_paths:
+        problems.append('release list does not contain the expected data/bootstrap files')
+    published = [row for row in code_rows if row['path'] not in EXCLUDED_RELEASE_FILES]
+    for row in published:
+        if Path(row['path']).suffix not in ('.py', '.cmd', '.txt') and row['path'] != 'companion/VERSION':
+            problems.append(f'non-source file in the published subset: {row["path"]}')
+    expected = {row['path'] for row in published} | REPO_EXTRAS
     present = set()
     for folder, dirs, files in os.walk(HERE):
         dirs[:] = [d for d in dirs if d not in ('.git', '__pycache__')]
+        for name in dirs + files:
+            if (Path(folder) / name).is_symlink():
+                problems.append(f'symlink in repository: {(Path(folder) / name).relative_to(HERE)}')
         for name in files:
             present.add((Path(folder) / name).relative_to(HERE).as_posix())
     for path in sorted(present - expected):
         problems.append(f'unexpected file in this repository: {path}')
     for path in sorted(expected - present):
         problems.append(f'missing from this repository: {path}')
-    for row in code_rows:
+    for row in published:
         path = HERE / row['path']
         if path.is_file():
             data = path.read_bytes()
             if (len(data), sha256(data)) != (row['size'], row['sha256']):
                 problems.append(f'differs from the release: {row["path"]}')
-    print(f'{len(code_rows)} code files here compared with the release file list; '
+    print(f'{len(published)} published code files compared with the release file list; '
           f'{len(present - expected)} unexpected file(s).')
+    print(f'{len(EXCLUDED_RELEASE_FILES)} release files intentionally excluded (11 catalogs and 4 source files); their hashes remain in the original manifests.')
     check_manifest('launcher-stable.json', 'stable', code_rows, problems)
-    check_manifest('launcher-beta.json', 'beta', code_rows, problems)
     return core
 
 
@@ -214,12 +249,15 @@ def check_zip(archive_path, core, problems):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--zip', type=Path, help='downloaded TWA-Launcher-0.2.25.zip to check as well')
+    parser.add_argument('--zip', type=Path, help='downloaded TWA-Launcher-0.2.43.zip to check as well')
     args = parser.parse_args()
     problems = []
-    core = check_repository(problems)
-    if args.zip:
-        check_zip(args.zip, core, problems)
+    try:
+        core = check_repository(problems)
+        if args.zip:
+            check_zip(args.zip, core, problems)
+    except (OSError, ValueError, KeyError, TypeError, zipfile.BadZipFile) as exc:
+        problems.append(f'invalid or unreadable verification input ({type(exc).__name__})')
     if problems:
         print('FAILED:')
         for problem in problems:

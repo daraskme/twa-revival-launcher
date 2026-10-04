@@ -6,7 +6,8 @@ the real, now-implemented private-server/ source while writing this module
 updates.ts -- that thread built this concurrently with this one; see
 docs/companion_updater_20260902.md's "companion/eos との統合"-adjacent notes
 for what was cross-checked and what still needs a live wrangler-dev
-integration pass). Every request carries ``X-TWA-Client-Version`` and (when
+integration pass). Every request carries ``X-TWA-Client-Version`` (the game)
+and ``X-TWA-Launcher-Version`` (the installed companion) and (when
 there is a body, or always for consistency -- see _headers())
 ``Content-Type: application/json``, and never sets ``Origin`` (index.ts
 rejects any request that has one: this client is a native companion, not a
@@ -32,6 +33,8 @@ not a transient glitch to retry through; the caller should surface it).
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
+from email.utils import parsedate_to_datetime
 import hashlib
 import ipaddress
 import json
@@ -45,9 +48,28 @@ from pathlib import Path
 from typing import Any, NoReturn
 from urllib.parse import quote, urlsplit
 
+from .manifest import ManifestError, semver_tuple
+
 MAX_JSON_BYTES = 4 * 1024 * 1024  # 4 MiB cap on parsed JSON responses
 DEFAULT_TIMEOUT = 15.0
 _RETRYABLE_NETWORK_ERRORS = (urllib.error.URLError, socket.timeout, ConnectionError, TimeoutError)
+def _validated_launcher_version(value: object) -> str:
+    """Use an unambiguous SemVer header; malformed installations report old."""
+    if not isinstance(value, str) or not 1 <= len(value) <= 64:
+        return "0.0.0"
+    try:
+        semver_tuple(value)
+    except (ManifestError, TypeError, ValueError):
+        return "0.0.0"
+    return value
+
+
+def _installed_launcher_version() -> str:
+    try:
+        value = (Path(__file__).parent / "VERSION").read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeError):
+        return "0.0.0"
+    return _validated_launcher_version(value)
 
 
 class ApiError(Exception):
@@ -72,6 +94,14 @@ class UpdateRequiredError(ApiError):
     def __init__(self, min_version: str, manifest_url: str | None) -> None:
         super().__init__(426, "update_required", f"client update required: >= {min_version}")
         self.min_version = min_version
+        self.manifest_url = manifest_url
+
+
+class LauncherUpdateRequiredError(ApiError):
+    def __init__(self, min_launcher_version: str, manifest_url: str | None) -> None:
+        super().__init__(426, "launcher_update_required",
+                         f"launcher update required: >= {min_launcher_version}")
+        self.min_launcher_version = min_launcher_version
         self.manifest_url = manifest_url
 
 
@@ -131,6 +161,11 @@ def _raise_for_status(status: int, body: Any) -> NoReturn:
     code = str(obj.get("error", "unknown"))
     if status == 503 and code == "maintenance":
         raise MaintenanceError(str(obj.get("message", "")), obj.get("endsAt"))
+    if status == 426 and code == "launcher_update_required":
+        raise LauncherUpdateRequiredError(
+            str(obj.get("minLauncherVersion", "")),
+            obj.get("manifestUrl") if isinstance(obj.get("manifestUrl"), str) else None,
+        )
     if status == 426:
         # Field names confirmed against the real private-server/src/control.ts
         # (enforceClientVersion): {error:"update_required", minClientVersion, manifestUrl}.
@@ -151,6 +186,37 @@ def _parse_json_bytes(raw: bytes) -> Any:
         return {}
 
 
+@dataclass(frozen=True)
+class ResponseClock:
+    """Time of one successful origin response, used only for session deadlines."""
+    path: str
+    server_time: int
+    local_started: float
+
+    @classmethod
+    def read(cls, response, path, started, elapsed):
+        try:
+            headers = response.headers
+            values = headers.get_all('Date') if hasattr(headers, 'get_all') else [headers.get('Date')]
+            if not isinstance(values, list) or len(values) != 1:
+                return None
+            value = values[0]
+            if not isinstance(value, str) or len(value) > 128:
+                return None
+            date = parsedate_to_datetime(value)
+            if date.tzinfo is None or date.utcoffset().total_seconds() != 0:
+                return None
+            server_time = int(date.timestamp())
+            # A changed OS clock during the request cannot define a reliable
+            # local deadline. Missing/malformed Date falls back to strict checks.
+            if (server_time <= 0 or not 0 <= elapsed <= 600
+                    or abs((time.time() - started) - elapsed) > 2):
+                return None
+            return cls(path, server_time, started)
+        except (AttributeError, TypeError, ValueError, OverflowError):
+            return None
+
+
 class ApiClient:
     def __init__(
         self,
@@ -161,10 +227,14 @@ class ApiClient:
         *,
         strict_download_transport: bool = False,
         total_timeout: float | None = None,
+        launcher_version: str | None = None,
     ) -> None:
         self.base_url = normalize_api_base_url(base_url)
         self.client_version = client_version
+        self.launcher_version = (_installed_launcher_version() if launcher_version is None
+                                 else _validated_launcher_version(launcher_version))
         self.session_token = session_token
+        self.response_clock: ResponseClock | None = None
         if not math.isfinite(timeout) or timeout <= 0:
             raise ValueError("timeout must be a finite positive number")
         if total_timeout is not None and (
@@ -223,6 +293,7 @@ class ApiClient:
         headers = {
             "User-Agent": f"TWA-Revival-Companion/{self.client_version}",
             "X-TWA-Client-Version": self.client_version,
+            "X-TWA-Launcher-Version": self.launcher_version,
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
@@ -243,6 +314,7 @@ class ApiClient:
         extra_headers: dict[str, str] | None = None,
         max_bytes: int = MAX_JSON_BYTES,
     ) -> Any:
+        self.response_clock = None
         idempotent = method == "GET"
         url = f"{self.base_url}{path}"
         data = json.dumps(body).encode("utf-8") if body is not None else None
@@ -254,10 +326,12 @@ class ApiClient:
                 url, data=data, method=method, headers=self._headers(auth_token, extra_headers)
             )
             try:
+                started, tick = time.time(), time.monotonic()
                 with self._opener.open(req, timeout=self._operation_timeout()) as resp:
                     raw = self._read_bounded(resp, max_bytes)
                     if len(raw) > max_bytes:
                         raise ApiError(resp.status, "response_too_large")
+                    self.response_clock = ResponseClock.read(resp, path, started, time.monotonic() - tick)
                     return _parse_json_bytes(raw)
             except urllib.error.HTTPError as exc:
                 try:
@@ -472,6 +546,9 @@ class ApiClient:
     def get_battle(self, battle_id: str) -> dict[str, Any]:
         return self._request("GET", f"/v1/battles/{battle_id}")
 
+    def get_battle_with_admission(self, battle_id: str) -> dict[str, Any]:
+        return self._request("GET", f"/v1/battles/{battle_id}?admission=1")
+
     def get_active_battle(self) -> dict[str, Any]:
         return self._request("GET", "/v1/battles/active")
 
@@ -564,6 +641,7 @@ class ApiClient:
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = dest_path.with_name(dest_path.name + ".part")
         req = urllib.request.Request(full_url, headers={"X-TWA-Client-Version": self.client_version,
+            "X-TWA-Launcher-Version": self.launcher_version,
             "User-Agent": f"TWA-Revival-Companion/{self.client_version}"})
         hasher = hashlib.sha256()
         total = 0

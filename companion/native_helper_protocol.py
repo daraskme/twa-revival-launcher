@@ -18,6 +18,7 @@ def canonical_ready_payload(payload: dict[str, Any]) -> bytes:
         "helper_pid": payload.get("helper_pid"),
         "arena_pid": payload.get("arena_pid"),
         "specialization_mode": payload.get("specialization_mode"),
+        "arcani_slot_fix_mode": payload.get("arcani_slot_fix_mode"),
         "arena_path": payload.get("arena_path"),
         "game_path": payload.get("game_path"),
         "game_sha256": payload.get("game_sha256"),

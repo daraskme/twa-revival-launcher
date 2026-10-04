@@ -95,7 +95,8 @@ class PrivateBattleApi:
 
     def get_battle(self, battle_id: str) -> dict:
         """Read the authenticated participant view used to resolve retries."""
-        return self._call(lambda: self._api.get_battle(battle_id), mutation=False)
+        reader = getattr(self._api, 'get_battle_with_admission', self._api.get_battle)
+        return self._call(lambda: reader(battle_id), mutation=False)
 
 
 def _typed_equal(value, expected) -> bool:
@@ -305,6 +306,16 @@ class CloudPrivateLobbyAdapter:
         self._battle = None
         self._restored_prepared_room = None
         self._length = 600
+
+    def after_native_response(self, path):
+        """Announce the MUC only once the create/join response is on the wire."""
+        if path not in ('/create', '/join'):
+            return
+        with self._lock:
+            if self.room_id is not None and self._notifier is not None:
+                self._notification_serial += 1
+                self._outbox.append((self._notification_serial, 'chat_room', self.room_id, None))
+                self._flush_notifications()
 
     def _flush_notifications(self) -> None:
         while self._outbox:

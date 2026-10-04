@@ -36,6 +36,7 @@ class NativePrivateRuntime:
         self._lock = threading.RLock()
         self._reported = set()
         self._clock_seconds = clock_seconds or (lambda: int(time.time()))
+        self._next_recovery_check = 0
         self._return_receipt = None
         self._closing_binding = None
         self.binding = self._new_binding()
@@ -145,7 +146,10 @@ class NativePrivateRuntime:
                         self._reported.add(battle_id)
                 expired = (type(manifest.get("expiresAt")) is int
                            and self._clock_seconds() >= manifest["expiresAt"])
-                if ((snapshot.get("phase") == "delivered" or expired)
+                recovery_due = self._clock_seconds() >= self._next_recovery_check
+                if recovery_due:
+                    self._next_recovery_check = self._clock_seconds() + 5
+                if ((snapshot.get("phase") == "delivered" or expired or recovery_due)
                         and self.results.return_owner(
                             copy.deepcopy(manifest)) is True):
                     try:

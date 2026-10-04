@@ -28,7 +28,8 @@ Revival-owned real directories; ``client\\data.original-junction`` is the
 only reference to the player's original data and is never updateable. A
 manifest path must be a canonical relative path and match the explicit
 allow-list below. Nested updates are limited to the copied WAD and the
-fourteen terrain packs used by the reviewed deployment-point update.
+fourteen terrain packs used by the reviewed deployment-point update, plus
+sixteen reviewed texture-memory packs.
 """
 from __future__ import annotations
 
@@ -178,15 +179,18 @@ ALLOWED_TOP_LEVEL_NAMES = {name.lower() for name in _STAGE_COPY_NAMES} | {
     "stack_config.json",
     "npl.conf",
     "language.txt",
-}
+} | {f"twa_warp_texture_{index:02}.bin" for index in range(16)}
 
-# Exact owned assets: the Tier-X pack and the 14 reviewed deployment maps.
-# Other terrain packs and arbitrary data/ or cef/ paths remain denied.
+# Exact owned assets: the Tier-X pack, the 14 reviewed deployment maps, and
+# the separately delivered texture-memory overlay. Other data/ and cef/ paths remain denied.
 DEPLOYMENT_PACK_PATHS = frozenset({
     f"data/terrain_maps_{index}.pack"
     for index in (0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14)
 })
-ALLOWED_NESTED_PATHS = {"data/wad.pack"} | DEPLOYMENT_PACK_PATHS
+TEXTURE_MEMORY_PACK_PATHS = frozenset(
+    f"data/zz_twa_texture_memory_{index:02}.pack" for index in range(16)
+)
+ALLOWED_NESTED_PATHS = {"data/wad.pack"} | DEPLOYMENT_PACK_PATHS | TEXTURE_MEMORY_PACK_PATHS
 
 
 def validate_relative_path(path: str) -> str:

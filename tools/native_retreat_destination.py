@@ -100,8 +100,8 @@ function buildRetreatCode(game, state, caves, processLifetime=false) {
 import hashlib
 import json
 from pathlib import Path
+from tools.player_native_payload import GAME_HASH as GAME_SHA256
 
-GAME_SHA256 = 'b5d1547b720fd03f1e55e76e2d41b531d2d72e0b4a6270c73223018b8cd45e06'
 
 INSTALL_JS = r'''
 (() => {

@@ -211,6 +211,7 @@ class _Client:
     closed: bool = False
     social_snapshot: dict | None = None
     diagnostic_iq_counts: dict = field(default_factory=dict, repr=False)
+    chat_rooms: dict = field(default_factory=dict, repr=False)
 
 
 class NativeXmppProbe:
@@ -229,6 +230,8 @@ class NativeXmppProbe:
         self._trace_target = trace
         self._trace_lock = threading.Lock()
         self._state_lock = threading.Lock()
+        self._chat_lock = threading.RLock()
+        self._chat_owners: dict[str, set[int]] = {}
         self._lifecycle_lock = threading.Lock()
         self._pending_lock = threading.Lock()
         self._pending_flush_lock = threading.Lock()
@@ -397,6 +400,9 @@ class NativeXmppProbe:
             client.sock.close()
         with self._state_lock:
             self._clients.pop(client.number, None)
+        with self._chat_lock:
+            for room in tuple(client.chat_rooms):
+                self._leave_chat_room(client, room)
         self._trace("xmpp_closed", connection=client.number, ready=False)
 
     def _send(self, client: _Client, text: str) -> None:
@@ -522,7 +528,28 @@ class NativeXmppProbe:
             self._trace("xmpp_offline_auth", connection=client.number)
         elif kind == "iq":
             self._iq(client, element)
+        elif kind == "message":
+            # A messaging failure is independent of the battle transport and
+            # must never close either of the native XMPP streams.
+            if element.get('type') == 'error':
+                return True
+            try:
+                if self.social is None or not client.bound_jid or client.resource == _NOTIFICATION_RESOURCE:
+                    raise ValueError('chat_unavailable')
+                self.social.message(element)
+            except Exception:
+                stanza_id = element.get('id', '')
+                identifier = (' id=' + quoteattr(stanza_id)) if len(stanza_id) <= 128 else ''
+                target = element.get('to', '')
+                sender = (' from=' + quoteattr(target)) if len(target) <= 512 else ''
+                self._send(client, '<message type="error"' + identifier + sender
+                    + '><error type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></message>')
+                self._trace('xmpp_chat_unavailable', connection=client.number)
         elif kind == "presence":
+            target = element.get('to', '')
+            if '@conference.revival-xmpp.localhost' in target:
+                self._chat_presence(client, element)
+                return True
             if self.social is not None and client.bound_jid:
                 try:
                     if self.social.presence(element):
@@ -533,6 +560,76 @@ class NativeXmppProbe:
             jid = quoteattr(client.bound_jid or _local_user() + "@" + client.host + "/twa")
             self._send(client, f"<presence from={jid} to={jid}/>")
         return True
+
+    def _leave_chat_room(self, client: _Client, room: str) -> None:
+        """Called under _chat_lock; another live stream may still use this room."""
+        with client.send_lock:
+            client.chat_rooms.pop(room, None)
+        owners = self._chat_owners.get(room, set())
+        owners.discard(client.number)
+        if not owners:
+            self._chat_owners.pop(room, None)
+            if self.social is not None:
+                self.social.room_presence(room, leave=True)
+
+    def _chat_presence(self, client: _Client, element: ET.Element) -> None:
+        with self._chat_lock:
+            self._chat_presence_ordered(client, element)
+
+    def _chat_presence_ordered(self, client: _Client, element: ET.Element) -> None:
+        target = element.get('to', '')
+        try:
+            bare, nickname = target.split('/', 1)
+            if (self.social is None or not client.bound_jid or client.resource == _NOTIFICATION_RESOURCE
+                    or not nickname or len(nickname) > 128 or element.get('type') not in (None, 'unavailable')):
+                raise ValueError('invalid_chat_presence')
+            leaving = element.get('type') == 'unavailable'
+            if leaving:
+                self._leave_chat_room(client, bare)
+            else:
+                self.social.room_presence(bare)
+            with client.send_lock:
+                if client.closed:
+                    if not self._chat_owners.get(bare):
+                        self.social.room_presence(bare, leave=True)
+                    return
+                if not leaving:
+                    client.chat_rooms[bare] = nickname
+                    self._chat_owners.setdefault(bare, set()).add(client.number)
+                self._send(client, '<presence from=' + quoteattr(target) + ' to=' + quoteattr(client.bound_jid)
+                    + (' type="unavailable"' if leaving else '')
+                    + '><x xmlns="http://jabber.org/protocol/muc#user"><item affiliation="member" role="'
+                    + ('none' if leaving else 'participant') + '"/><status code="110"/></x></presence>')
+        except Exception:
+            self._send(client, '<presence type="error" from=' + quoteattr(target[:512])
+                + '><error type="auth"><forbidden xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></presence>')
+            self._trace('xmpp_chat_join_unavailable', connection=client.number)
+
+    def send_chat(self, message: dict) -> bool:
+        """Deliver a validated inbox message to one chat stream, never notifications."""
+        with self._state_lock:
+            clients = sorted(self._clients.values(), key=lambda client: client.number)
+        for client in clients:
+            with client.send_lock:
+                if client.closed or not client.bound_jid or client.resource == _NOTIFICATION_RESOURCE:
+                    continue
+                room = message.get('room')
+                if room is not None and room not in client.chat_rooms:
+                    continue
+                sender = message['senderId'] + '@' + client.host
+                if room is not None:
+                    nickname = (client.chat_rooms[room] if self.social is not None
+                        and message['senderId'] == self.social.user_id else message['displayName'])
+                    sender = room + '/' + nickname
+                stanza = ('<message type=' + quoteattr('groupchat' if room else 'chat')
+                    + ' id=' + quoteattr(message['id'])
+                    + ' from=' + quoteattr(sender)
+                    + ' to=' + quoteattr(client.bound_jid) + '><body>' + escape(message['text'])
+                    + '</body><nick xmlns="http://jabber.org/protocol/nick">'
+                    + escape(message['displayName']) + '</nick></message>')
+                self._send(client, stanza)
+                return True
+        return False
 
     def _trace_iq(self, client: _Client, element: ET.Element, *, error=None) -> None:
         """Fixed labels only, at most two rows per classification per stream.
@@ -567,6 +664,11 @@ class NativeXmppProbe:
 
     def _iq(self, client: _Client, element: ET.Element) -> None:
         self._trace_iq(client, element)
+        # A roster push is acknowledged by the client with result/error.
+        # These are replies, not new requests; replying again can create an
+        # acknowledgement loop on the native social stream.
+        if element.get('type') in ('result', 'error'):
+            return
         if self.social is not None and client.bound_jid:
             try:
                 if element.get('type') == 'get' and element.find('{jabber:iq:roster}query') is not None:
@@ -850,6 +952,17 @@ class NativeXmppProbe:
                  "</cg_id><player_id>" + escape(_local_user()) + "</player_id><new_state>" + state +
                  "</new_state></player_state_changed>")
         return self._broadcast(inner, "xmpp_player_ready", ready=ready)
+
+    def send_private_chat_room(self, game_id: str) -> int:
+        game_id = _game_id(game_id)
+        from native_social import chat_room_jid
+        inner = ('<cg_chatroom_created xmlns="http://arenatw.co.uk/xmpp"><cg_id>' + escape(game_id)
+            + '</cg_id><chat_room_jid>' + escape(chat_room_jid('lobby', game_id))
+            + '</chat_room_jid></cg_chatroom_created>')
+        try:
+            return self._broadcast(inner, 'xmpp_private_chat_room', strict_delivery=True)
+        except XmppDeliveryUncertain:
+            raise CpuNotificationDeliveryUncertain() from None
 
     def send_player_loadout(self, game_id: str, details: dict) -> int:
         """Notify an already verified local owned squad, without starting play.

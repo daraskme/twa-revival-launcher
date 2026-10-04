@@ -1672,7 +1672,8 @@ class ProbeHandler(offline.Handler):
                 or code.endswith('_not_owned') or code.endswith('_mismatch')
                 or code in {'commander_tier_too_low', 'idempotency_conflict',
                             'unit_prerequisite_not_owned', 'battle_already_settled',
-                            'battle_not_found'}):
+                            'battle_not_found', 'ability_tree_reset_state_changed',
+                            'ability_tree_reset_incomplete'}):
             return 409
         return 503
 
@@ -2380,7 +2381,9 @@ class ProbeHandler(offline.Handler):
             if name == GAME_CONFIG_FILENAME:
                 self._send(200, json.dumps(build_matchmaking_game_config(
                                             native_five_mode_selector=
-                                            self.native_five_mode_selector),
+                                            self.native_five_mode_selector,
+                                            public_pvp_only=bool(self.matchmaking and
+                                                self.matchmaking.public_pvp_only)),
                                             separators=(',', ':')).encode('utf-8'))
                 return
         if path in SOCIAL_PARTY_PATHS and type(self).native_social_party is not None:
@@ -2400,6 +2403,14 @@ class ProbeHandler(offline.Handler):
                         profile['profile'], method=self.command)
                     if projected is not None:
                         self._send(200, json.dumps(projected, separators=(',', ':')).encode('utf-8'))
+                        callback = getattr(cloud, 'after_native_response', None)
+                        if callback is not None:
+                            try:
+                                callback(path)
+                            except Exception:
+                                # The HTTP response was already delivered. A queued
+                                # chat notification retries on the lobby refresh.
+                                self._lobby_error = 'private_chat_notification_pending'
                         return
                 except NativeLobbyError as error:
                     self._lobby_error = error.code
@@ -2991,6 +3002,12 @@ class ProbeHandler(offline.Handler):
                     'units': list(
                         snapshot['commanders'][commander_key]['equipped_units']
                     ),
+                    # The game's replaced-unit id names the saved slot even
+                    # after an in-game bar reorder moved the on-screen cards.
+                    'slot_instance_ids': [
+                        str(value) for value in
+                        service.adapter.slot_instance_ids(commander_key)
+                    ],
                 }
             self._send(200, json.dumps(
                 body, separators=(',', ':'),
@@ -3004,11 +3021,16 @@ class ProbeHandler(offline.Handler):
                 getattr(self, '_body', b''),
                 self.headers.get('Content-Type', ''),
             )
-            if (headers or form_scalars
-                    or set(request) != {
-                        'item_id', 'slot', 'commander_item_id',
-                        'expected_saved',
-                    }):
+            legacy_fields = {
+                'item_id', 'slot', 'commander_item_id', 'expected_saved',
+            }
+            if headers or form_scalars:
+                raise NativeLobbyError(400, 'invalid_unit_loadout_selection')
+            if set(request) == legacy_fields:
+                # A helper that cannot report the game's target slot item
+                # would save by screen position without the reorder latch.
+                raise NativeLobbyError(400, 'unit_loadout_target_required')
+            if set(request) != legacy_fields | {'target_instance_id'}:
                 raise NativeLobbyError(400, 'invalid_unit_loadout_selection')
             raw_item_id = request['item_id']
             raw_commander_item_id = request['commander_item_id']
@@ -3032,6 +3054,16 @@ class ProbeHandler(offline.Handler):
                 raise NativeLobbyError(400, 'invalid_unit_loadout_watermark')
             if type(slot) is not int or not 0 <= slot < 3:
                 raise NativeLobbyError(400, 'invalid_unit_loadout_slot')
+            raw_target = request['target_instance_id']
+            target_instance_id = None
+            if raw_target is not None:
+                if (not isinstance(raw_target, str)
+                        or not raw_target.isascii()
+                        or not raw_target.isdigit() or len(raw_target) > 20):
+                    raise NativeLobbyError(400, 'invalid_unit_loadout_target')
+                target_instance_id = int(raw_target)
+                if not 0 < target_instance_id < 2**64:
+                    raise NativeLobbyError(400, 'invalid_unit_loadout_target')
 
             with service._lock, economy._lock:  # type: ignore[attr-defined]
                 snapshot = economy.snapshot()
@@ -3045,6 +3077,24 @@ class ProbeHandler(offline.Handler):
                     raise NativeLobbyError(
                         409, 'unit_loadout_state_changed',
                     )
+                if target_instance_id is not None:
+                    # The helper's slot came from the game's replaced-unit id;
+                    # it must be this commander's deployed item for that slot.
+                    deployed = service.adapter.deployed_slot_for_instance(
+                        target_instance_id,
+                    )
+                    if deployed is None:
+                        raise NativeLobbyError(
+                            409, 'unit_loadout_target_unknown',
+                        )
+                    if deployed[0] != commander_key:
+                        raise NativeLobbyError(
+                            409, 'unit_loadout_target_commander_mismatch',
+                        )
+                    if deployed[1] != slot:
+                        raise NativeLobbyError(
+                            409, 'unit_loadout_target_slot_mismatch',
+                        )
                 candidates = [
                     key for key, row in economy.units.items()
                     if row.get('item_id') == item_id
@@ -3110,6 +3160,13 @@ class ProbeHandler(offline.Handler):
                 'event': ('native_unit_drag_persisted' if changed
                           else 'native_unit_drag_unchanged'),
                 'slot': slot,
+                'slot_source': (
+                    'screen' if target_instance_id is None else 'native'
+                ),
+                'target_instance_id': (
+                    None if target_instance_id is None
+                    else str(target_instance_id)
+                ),
             })
             body = {
                 'ok': True,
@@ -3162,6 +3219,13 @@ class ProbeHandler(offline.Handler):
                         409, 'unit_loadout_state_changed',
                     )
             else:
+                # Keep the helper's 409, but trace the economy code: a
+                # failed cloud save (e.g. profile_body_too_large) must not
+                # look like a validation refusal in the bridge log.
+                self._trace({
+                    'event': 'native_unit_drag_rejected',
+                    'economy_error': economy_error.code,
+                })
                 error = NativeLobbyError(
                     409, 'unit_loadout_selection_rejected',
                 )
@@ -3169,7 +3233,12 @@ class ProbeHandler(offline.Handler):
             self._send(error.status, json.dumps(
                 error.as_envelope(), separators=(',', ':'),
             ).encode('utf-8'))
-        except (KeyError, TypeError, ValueError):
+        except (KeyError, TypeError, ValueError) as unexpected:
+            # Keep the helper's generic 409, but make the cause visible.
+            self._trace({
+                'event': 'native_unit_drag_rejected',
+                'error_class': type(unexpected).__name__,
+            })
             error = NativeLobbyError(409, 'unit_loadout_selection_rejected')
             self._lobby_error = error.code
             self._send(error.status, json.dumps(
@@ -3371,6 +3440,7 @@ def main(argv: list[str] | None = None, *,
          pvp_enabled: bool = False,
          pve_enabled: bool | None = None,
          cloud_coop_pve: bool = False,
+         public_pvp_only: bool = False,
          career_state_path: Path | None = None,
          career_history_root: Path | None = None,
          career_cloud_factory: Callable | None = None):
@@ -3385,8 +3455,8 @@ def main(argv: list[str] | None = None, *,
     parser = build_arg_parser()
     args = parser.parse_args(argv)
     validate_args(parser, args)
-    if type(cloud_coop_pve) is not bool:
-        raise TypeError('cloud_coop_pve must be bool')
+    if type(cloud_coop_pve) is not bool or type(public_pvp_only) is not bool:
+        raise TypeError('cloud_coop_pve and public_pvp_only must be bool')
     if type(pvp_enabled) is not bool or pve_enabled is not None \
             and type(pve_enabled) is not bool:
         raise TypeError('pvp_enabled and pve_enabled must be bool')
@@ -3548,9 +3618,7 @@ def main(argv: list[str] | None = None, *,
                 battle_ruleset=battle_ruleset,
                 pvp_enabled=bool(pvp_enabled),
                 native_five_mode_selector=args.native_five_mode_selector,
-                disabled_rulesets=(frozenset({'annihilation'})
-                                   if args.native_five_mode_selector and economy_backend is not None
-                                   else frozenset()),
+                public_pvp_only=public_pvp_only,
                 # The ordinary default remains one relay capability.  The
                 # companion may explicitly enable both and arbitrate the one
                 # loopback relay port during a five-selector session.

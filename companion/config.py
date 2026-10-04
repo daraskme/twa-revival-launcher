@@ -1,11 +1,13 @@
 """Companion configuration and local state (session token, update state).
 
-Private session/staging/backup state lives under
-``%LOCALAPPDATA%\\TWARevival\\`` by default (override with
+Private session state lives under ``%LOCALAPPDATA%\\TWARevival\\`` by
+default (override with
 the ``TWA_COMPANION_STATE_DIR`` environment variable -- tests always do this
-so they never touch a real machine's LocalAppData). The signed-update floor is
-instead tied to the copied client itself so changing the private state override
-cannot make an older signed manifest look like an upgrade:
+so they never touch a real machine's LocalAppData). Large update downloads and
+rollback backups live in the install-local ``.twa-revival-update-work``
+directory so they use the game volume. The signed-update floor is instead tied
+to the copied client itself so changing the private state override cannot make
+an older signed manifest look like an upgrade:
 
 ``session.json``
     Holds the companion's own bearer session token (the Worker's
@@ -40,6 +42,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 _VERSION_FILE = Path(__file__).resolve().parent / "VERSION"
 _PATHS_INI = REPO_ROOT / "config" / "paths.ini"
 CLIENT_UPDATE_STATE_FILENAME = ".twa-revival-update-state.json"
+CLIENT_UPDATE_WORK_DIRNAME = ".twa-revival-update-work"
 
 
 def _read_client_version() -> str:
@@ -96,12 +99,17 @@ class Config:
         return self.state_dir / "update_state.json"
 
     @property
+    def update_work_dir(self) -> Path:
+        """Per-install update scratch space on the game's target volume."""
+        return self.client_dir / CLIENT_UPDATE_WORK_DIRNAME
+
+    @property
     def staging_dir(self) -> Path:
-        return self.state_dir / "staging"
+        return self.update_work_dir / "staging"
 
     @property
     def backup_dir(self) -> Path:
-        return self.state_dir / "backup"
+        return self.update_work_dir / "backup"
 
     def ensure_state_dir(self) -> None:
         self.state_dir.mkdir(parents=True, exist_ok=True)

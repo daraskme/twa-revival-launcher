@@ -16,12 +16,13 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from tools.player_native_payload import GAME_HASH
 
 GAME_SHA256 = '541d91ecfd137cb8e325d906cf193846a6b07cf4b0c9cffafcf444794f9bf641'
 PRIVATE_RESPONSE_GAME_SHA256 = '4fc11b6e734042ee0c7d0df54bc5c7f689f2d7842c450e4df541e22310804013'
 RECENT_FALLBACK_GAME_SHA256 = '4e622f6934e0ba552b93ef546bec5dacdb0d7ae47d28b0c823959b52fdd08f15'
-GAME_SHA256S = frozenset({GAME_SHA256, PRIVATE_RESPONSE_GAME_SHA256, RECENT_FALLBACK_GAME_SHA256, 'f760ece7869a3e254376f927ee610675cab8112fafb502c6c18e90c30664fc0c', '884e30f841d6a1268b7cc918fa2d14b972f007ce593b957fd3d1ee93c75cbf0a', 'b5d1547b720fd03f1e55e76e2d41b531d2d72e0b4a6270c73223018b8cd45e06'})
-UI_SHA256 = '896693d11cd1b79f99df919856f446c95ef85888ee325c698361bae0e76c64c9'
+GAME_SHA256S = frozenset({GAME_SHA256, PRIVATE_RESPONSE_GAME_SHA256, RECENT_FALLBACK_GAME_SHA256, 'f760ece7869a3e254376f927ee610675cab8112fafb502c6c18e90c30664fc0c', '884e30f841d6a1268b7cc918fa2d14b972f007ce593b957fd3d1ee93c75cbf0a', 'b5d1547b720fd03f1e55e76e2d41b531d2d72e0b4a6270c73223018b8cd45e06', GAME_HASH})
+UI_SHA256 = '3a7916541268a328ba8b4a8f843197883ea0d727dfc07add58513f7ee4c0ca2b'
 
 # The stock 55563 UDP port can be reserved by Windows even with no listener.
 # Only the owned, hash-verified process changes; disk images and OS reservations
@@ -146,7 +147,38 @@ TUTORIAL_MODE_SOURCE = r'''
 '''
 
 
-def build_source(root: Path) -> str:
+PUBLIC_PVP_PREFERENCE_SOURCE = r'''
+(() => {
+  if (Process.arch !== 'ia32') throw Error('public_pvp_preference_arch');
+  const game = Process.getModuleByName('game.dll');
+  const normalize = value => value.replaceAll('/', '\\').toLowerCase();
+  if (normalize(game.path) !== normalize(__GAME_PATH__)) throw Error('public_pvp_preference_path');
+  const getter = game.base.add(0x17a120);
+  const anchor = '558bec8b450883f871770e';
+  const actual = Array.from(new Uint8Array(getter.readByteArray(anchor.length / 2)),
+    byte => byte.toString(16).padStart(2, '0')).join('');
+  if (actual !== anchor) throw Error('public_pvp_preference_anchor');
+  // Option 0x61 is a logical UI index. Both its reader and writer use this
+  // accessor, which returns the address of its value, not the value itself.
+  // Convert retired public PvE preferences before any stock view restores
+  // them. Private (3), Territory PvP (2), Annihilation PvP (4) remain intact.
+  Interceptor.attach(getter, {
+    onEnter(args) { this.isMode = args[0].toUInt32() === 0x61; },
+    onLeave(value) {
+      if (!this.isMode || value.isNull()) return;
+      const range = Process.findRangeByAddress(value);
+      if (range === null || !range.protection.includes('w')) return;
+      const saved = value.readU32();
+      if (saved === 0 || saved === 1) value.writeU32(saved === 0 ? 2 : 4);
+    }
+  });
+})();
+'''
+
+
+def build_source(root: Path, *, public_pvp_only: bool = False) -> str:
+    if type(public_pvp_only) is not bool:
+        raise ValueError('invalid_public_pvp_only')
     game_digest = None
     for relative, digest in (('game.dll', GAME_SHA256), ('data/dui5.pack', UI_SHA256)):
         path = root / 'client' / relative
@@ -167,6 +199,9 @@ def build_source(root: Path) -> str:
         source += '\n' + native_party_mode_sync.build_source(root)
         source += '\n' + TUTORIAL_MODE_SOURCE.replace(
             '__GAME_PATH__', json.dumps(str((root/'client/game.dll').resolve())))
+        if public_pvp_only:
+            source += '\n' + PUBLIC_PVP_PREFERENCE_SOURCE.replace(
+                '__GAME_PATH__', json.dumps(str((root/'client/game.dll').resolve())))
         try:
             from . import native_retreat_destination
         except ImportError:

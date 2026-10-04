@@ -24,9 +24,11 @@ OPERATIONS = frozenset(("login", "account", "rename", "update", "launch", "langu
     "prepare", "bridge_start", "arena_start", "helper_start", "supervise", "teardown",
     "arena_exit", "battle_bind", "open_logs", "repair_hosts"))
 EVENTS = frozenset(("operation_failed", "process_failed", "python_unhandled",
-    "native_exit", "launch_started", "launch_failed", "battle_bound", "logging_unavailable"))
+    "native_exit", "launch_started", "launch_failed", "battle_bound", "logging_unavailable",
+    "renderer_profile"))
 # No arbitrary server/API error text is accepted as a diagnostic code.
-ERROR_CODES = frozenset(("failed", "offline", "configuration", "login_required", "auth_unavailable",
+ERROR_CODES = frozenset(("invalid_login_response", "invalid_session_token_response",
+    "invalid_session_expiry_response", "worker_identity_mismatch", "failed", "offline", "configuration", "login_required", "auth_unavailable",
     "maintenance", "launcher_update_failed", "game_launch_failed", "game_exited_with_error",
     "language_failed", "invalid_display_name", "player_name_required", "registration_closed",
     "invitation_required", "account_disabled", "runtime_dependency_missing", "runtime_invalid",
@@ -34,9 +36,9 @@ ERROR_CODES = frozenset(("failed", "offline", "configuration", "login_required",
     "install_destination", "install_files", "install_download", "install_launcher",
     "eos_auth_login", "eos_auth_token", "eos_connect_login", "eos_connect_create", "eos_connect_token",
     "loopback_dns_missing", "loopback_repair_failed", "loopback_repair_cancelled", "loopback_repair_unresolved",
-    "loopback_repair_unsupported"))
+    "loopback_repair_unsupported", "loopback_tls_failed", "loopback_repair_permission", "loopback_repair_timeout"))
 VERSION = re.compile(r"[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}(?:[-+][A-Za-z0-9.-]{1,32})?\Z")
-EXCEPTION_CLASSES = frozenset(("Exception", "RuntimeError", "ValueError", "TypeError", "OSError",
+EXCEPTION_CLASSES = frozenset(("WorkerLoginResponseError", "Exception", "RuntimeError", "ValueError", "TypeError", "OSError",
     "PermissionError", "FileNotFoundError", "TimeoutError", "ConnectionError", "MemoryError",
     "AssertionError", "KeyError", "IndexError", "AttributeError", "ZeroDivisionError",
     "ApiError", "NetworkError", "NativeLaunchError", "BridgeError", "BridgeStartError",
@@ -208,7 +210,9 @@ class DiagnosticLog:
         except Exception:
             pass
 
-    def event(self, event, operation, *, error=None, code=None, exit_code=None, eos_result=None, crash=False, installer_phase=None):
+    def event(self, event, operation, *, error=None, code=None, exit_code=None, eos_result=None, crash=False,
+              installer_phase=None, repair_stage=None, windows_error=None, helper_exit=None,
+              renderer_mode=None):
         if not self.available:
             return
         try:
@@ -220,6 +224,15 @@ class DiagnosticLog:
                     "launcherVersion": self.launcher_version, "gameVersion": self.game_version}
                 if operation == "install" and installer_phase in INSTALLER_PHASES:
                     value["installerPhase"] = installer_phase
+                if event == "renderer_profile" and renderer_mode in (
+                    "software", "hardware", "unknown", "preserved-software"):
+                    value["rendererMode"] = renderer_mode
+                if operation == 'repair_hosts':
+                    if repair_stage in ('start', 'process_handle', 'wait', 'helper_exit'):
+                        value['repairStage'] = repair_stage
+                    for name, number in (('windowsErrorCode', windows_error), ('helperExitCode', helper_exit)):
+                        if type(number) is int and 0 <= number <= 0xffffffff:
+                            value[name] = number
                 battle = self._battle()
                 if battle is not None:
                     value["battleId"] = battle

@@ -33,6 +33,10 @@ def diagnostics(*, state_dir=None):
 LANGUAGES = {"English": "EN", "日本語": "JA", "Русский": "RU"}
 TEXT = {
     "JA": {
+        "invalid_login_response": "ゲームサーバーからのログイン応答を確認できませんでした。再試行し、続く場合はエラーログをお知らせください。",
+        "invalid_session_token_response": "ゲームサーバーからのログイン応答を確認できませんでした。再試行し、続く場合はエラーログをお知らせください。",
+        "invalid_session_expiry_response": "ログインの有効期限を確認できませんでした。Windowsの日時を同期して再試行し、続く場合はエラーログをお知らせください。",
+        "worker_identity_mismatch": "Epicアカウントとゲームサーバーの応答が一致しません。再ログインし、続く場合はエラーログをお知らせください。",
         "title": "Epicでログインして、戦場へ。", "name": "プレイヤーネーム（初回登録時に入力）",
         "login": "Epicでログイン", "account": "ログイン状態を確認", "rename": "名前を保存",
         "update": "更新を確認して適用", "launch": "格納庫を開く", "working": "処理しています…",
@@ -64,19 +68,27 @@ TEXT = {
         "updated": "ランチャーを更新しました。",
         "restored": "更新を完了できなかったため、前のランチャーへ戻しました。",
         "launcher_update_failed": "ランチャーの更新を確認・適用できませんでした。時間をおいて再試行してください。",
+        "launcher_update_required": "ランチャーの更新が必要です。「更新を確認して適用」を実行し、ランチャーを再起動してください。",
         "runtime_dependency_missing": "Epic認証に必要な起動部品が見つかりません。下のMicrosoft公式案内からVisual C++ v14（x64）を導入し、もう一度ログインしてください。",
         "runtime_invalid": "起動部品を読み込めませんでした。配布クライアントを展開し直してください。改善しない場合は運営に確認してください。",
         "runtime_help": "Microsoft公式の起動部品案内を開く",
         "loopback_dns_missing": "このPCではゲームのローカルサービス名（revival-*.localhost）を解決できないため、このままではArenaがエラー0xf003で停止します。下のボタンから、必要なローカル設定をWindowsのhostsファイルに追加できます（管理者の承認が必要です）。",
+        "loopback_tls_failed": "ゲームのローカル通信用ファイルを修復できませんでした。保存先の書き込み権限と空き容量を確認して再試行してください。改善しない場合はログを運営に送ってください。",
         "loopback_repair": "自動で修正（管理者）",
         "loopback_repair_confirm": "{hosts} に「TWA Revival loopback names」と記した区画を作り、その中に revival-*.localhost を 127.0.0.1（このPC）へ対応付ける12行を追加します。それ以外は変更しません。\n\nWindowsが管理者の承認を求めます。この区画は後から削除すれば元に戻せます。\n\n続行しますか？",
         "loopback_repair_done": "修正しました。もう一度「ゲームを開始」を押してください。",
         "loopback_repair_cancelled": "管理者の承認がキャンセルされました。何も変更していません。",
         "loopback_repair_unresolved": "設定は追加しましたが、Windowsがまだ名前を解決できません。Windowsを再起動するか、VPNやセキュリティソフトを確認してから再試行してください。",
-        "loopback_repair_failed": "自動修正に失敗しました。セキュリティソフトがhostsファイルの変更を防いでいる可能性があります。追加する行をログフォルダーの loopback-hosts.txt に保存しました（下のボタンで開けます）。管理者として {hosts} に手動で追加してください。",
+        "loopback_repair_failed": "Windowsで自動修正を完了できませんでした。詳細はエラーログを確認してください。ログフォルダーに loopback-hosts.txt があれば、その行を管理者として {hosts} に追加できます。",
         "loopback_repair_unsupported": "hostsファイル（{hosts}）に、自動修正では安全に編集できない内容（非常に大きな一覧、特殊な文字コード、壊れたTWAの区画など）が含まれています。追加する行をログフォルダーの loopback-hosts.txt に保存しました（下のボタンで開けます）。管理者として手動で追加してください。",
+        "loopback_repair_permission": "Windowsがhostsファイルへの書き込みを拒否しました。ファイルの権限やセキュリティソフトの設定を確認してください。ログフォルダーに loopback-hosts.txt があれば、その行を管理者として {hosts} に追加できます。",
+        "loopback_repair_timeout": "管理者の修正処理が時間内に終了しませんでした。Windowsの管理者確認が開いていないか確認してください。ログフォルダーに loopback-hosts.txt があれば、その行を管理者として {hosts} に追加できます。",
     },
     "EN": {
+        "invalid_login_response": "Could not verify the game server sign-in response. Try again. If it still fails, please share your error logs.",
+        "invalid_session_token_response": "Could not verify the game server sign-in response. Try again. If it still fails, please share your error logs.",
+        "invalid_session_expiry_response": "Could not verify the sign-in expiry time. Sync the date and time in Windows Settings and try again. If it still fails, please share your error logs.",
+        "worker_identity_mismatch": "The game server response does not match your Epic account. Sign in again. If it still fails, please share your error logs.",
         "title": "Sign in with Epic. Enter the battlefield.", "name": "Player name (for first registration)",
         "login": "Sign in with Epic", "account": "Check sign-in", "rename": "Save name",
         "update": "Check and install updates", "launch": "Open hangar", "working": "Working…",
@@ -108,19 +120,27 @@ TEXT = {
         "updated": "Launcher updated.",
         "restored": "The update could not finish. The previous launcher was restored.",
         "launcher_update_failed": "Could not check or install the launcher update. Please try again later.",
+        "launcher_update_required": "A launcher update is required. Check for updates, install it, then restart the launcher.",
         "runtime_dependency_missing": "A component required for Epic sign-in is missing. Use the Microsoft guide below to install Visual C++ v14 (x64), then sign in again.",
         "runtime_invalid": "Could not load the runtime. Extract a fresh copy of the client. If this continues, contact the operator.",
         "runtime_help": "Open the official Microsoft runtime guide",
         "loopback_dns_missing": "This PC cannot find the game's local service names (revival-*.localhost), so Arena would stop with error 0xf003. Use the button below to add the required local entries to the Windows hosts file (administrator approval required).",
+        "loopback_tls_failed": "Could not repair the game's local connection files. Check that the installation folder is writable and the disk has free space, then try again. If this continues, send your logs to the operator.",
         "loopback_repair": "Fix automatically (administrator)",
         "loopback_repair_confirm": "This adds 12 lines that map revival-*.localhost to 127.0.0.1 (this PC), inside a block marked \"TWA Revival loopback names\" in {hosts}. Nothing else is changed.\n\nWindows will ask for administrator approval. You can undo this later by deleting that block.\n\nContinue?",
         "loopback_repair_done": "Fixed. Press Start game again.",
         "loopback_repair_cancelled": "Administrator approval was cancelled. Nothing was changed.",
         "loopback_repair_unresolved": "The entries were added, but Windows still cannot find the names. Restart Windows, or check VPN and security software, then try again.",
-        "loopback_repair_failed": "The automatic fix failed. Security software may be blocking changes to the hosts file. The exact lines were saved as loopback-hosts.txt in the log folder (open it with the button below). Add them manually to {hosts} as administrator.",
+        "loopback_repair_failed": "Windows could not complete the automatic repair. Check the error logs for details. If loopback-hosts.txt is in the log folder, add its lines to {hosts} as administrator.",
         "loopback_repair_unsupported": "The hosts file at {hosts} contains content the automatic fix will not edit safely (for example a very large list, an unusual encoding or a damaged TWA block). The exact lines were saved as loopback-hosts.txt in the log folder (open it with the button below). Add them manually as administrator.",
+        "loopback_repair_permission": "Windows denied writing to the hosts file. Check file permissions and security software settings. If loopback-hosts.txt is in the log folder, add its lines to {hosts} as administrator.",
+        "loopback_repair_timeout": "The administrator repair did not finish in time. Check for an open Windows administrator prompt. If loopback-hosts.txt is in the log folder, add its lines to {hosts} as administrator.",
     },
     "RU": {
+        "invalid_login_response": "Не удалось проверить ответ игрового сервера при входе. Повторите попытку. Если ошибка повторится, отправьте журналы ошибок.",
+        "invalid_session_token_response": "Не удалось проверить ответ игрового сервера при входе. Повторите попытку. Если ошибка повторится, отправьте журналы ошибок.",
+        "invalid_session_expiry_response": "Не удалось проверить срок действия входа. Синхронизируйте дату и время в параметрах Windows и повторите попытку. Если ошибка повторится, отправьте журналы ошибок.",
+        "worker_identity_mismatch": "Ответ игрового сервера не соответствует вашей учётной записи Epic. Войдите снова. Если ошибка повторится, отправьте журналы ошибок.",
         "title": "Войдите через Epic и выходите на поле боя.", "name": "Имя игрока (для первой регистрации)",
         "login": "Войти через Epic", "account": "Проверить вход", "rename": "Сохранить имя",
         "update": "Проверить и установить обновления", "launch": "Открыть ангар", "working": "Выполняется…",
@@ -152,17 +172,21 @@ TEXT = {
         "updated": "Лаунчер обновлён.",
         "restored": "Обновление не завершено. Восстановлена предыдущая версия лаунчера.",
         "launcher_update_failed": "Не удалось проверить или установить обновление лаунчера. Повторите попытку позже.",
+        "launcher_update_required": "Требуется обновление лаунчера. Установите обновление и перезапустите лаунчер.",
         "runtime_dependency_missing": "Отсутствует компонент для входа через Epic. Установите Visual C++ v14 (x64) по инструкции Microsoft ниже, затем войдите снова.",
         "runtime_invalid": "Не удалось загрузить компоненты запуска. Распакуйте клиент заново. Если ошибка повторится, обратитесь к оператору.",
         "runtime_help": "Открыть официальную инструкцию Microsoft",
         "loopback_dns_missing": "Этот компьютер не находит локальные имена служб игры (revival-*.localhost), поэтому Arena остановится с ошибкой 0xf003. Кнопка ниже добавит нужные локальные записи в файл hosts Windows (требуется подтверждение администратора).",
+        "loopback_tls_failed": "Не удалось восстановить файлы локального подключения игры. Проверьте доступ на запись в папку игры и свободное место на диске, затем повторите попытку. Если ошибка повторяется, отправьте журналы оператору.",
         "loopback_repair": "Исправить автоматически (администратор)",
         "loopback_repair_confirm": "В файл {hosts} будет добавлено 12 строк, связывающих revival-*.localhost с 127.0.0.1 (этот компьютер), внутри блока с пометкой «TWA Revival loopback names». Больше ничего не изменится.\n\nWindows запросит подтверждение администратора. Позже это можно отменить, удалив этот блок.\n\nПродолжить?",
         "loopback_repair_done": "Исправлено. Снова нажмите «Начать игру».",
         "loopback_repair_cancelled": "Подтверждение администратора отменено. Ничего не изменено.",
         "loopback_repair_unresolved": "Записи добавлены, но Windows по-прежнему не находит эти имена. Перезагрузите Windows или проверьте VPN и защитные программы, затем повторите попытку.",
-        "loopback_repair_failed": "Автоматическое исправление не удалось. Возможно, защитная программа блокирует изменение файла hosts. Нужные строки сохранены в файл loopback-hosts.txt в папке журналов (откройте её кнопкой ниже). Добавьте их вручную в {hosts} от имени администратора.",
+        "loopback_repair_failed": "Windows не удалось завершить автоматическое исправление. Проверьте журналы ошибок. Если в папке журналов есть loopback-hosts.txt, добавьте его строки в {hosts} от имени администратора.",
         "loopback_repair_unsupported": "Файл hosts ({hosts}) содержит данные, которые автоматическое исправление не может безопасно изменить (например, очень большой список, необычная кодировка или повреждённый блок TWA). Нужные строки сохранены в файл loopback-hosts.txt в папке журналов (откройте её кнопкой ниже). Добавьте их вручную от имени администратора.",
+        "loopback_repair_permission": "Windows отказала в записи в файл hosts. Проверьте права доступа и настройки защитных программ. Если в папке журналов есть loopback-hosts.txt, добавьте его строки в {hosts} от имени администратора.",
+        "loopback_repair_timeout": "Исправление от имени администратора не завершилось вовремя. Проверьте, не открыт ли запрос Windows на повышение прав. Если в папке журналов есть loopback-hosts.txt, добавьте его строки в {hosts} от имени администратора.",
     },
 }
 ACTIONS = ("login", "account", "rename", "update", "launch")
@@ -183,9 +207,11 @@ def open_runtime_help():
 
 # Notices after which the hosts repair is offered (again).
 LOOPBACK_REPAIR_OFFERED = frozenset(("loopback_dns_missing", "loopback_repair_cancelled",
-    "loopback_repair_unresolved", "loopback_repair_failed", "loopback_repair_unsupported"))
+    "loopback_repair_unresolved", "loopback_repair_failed", "loopback_repair_unsupported",
+    "loopback_repair_permission", "loopback_repair_timeout"))
 # Notices whose "{hosts}" is filled with the real path when shown (the confirm dialog too).
-HOSTS_PATH_NOTICES = frozenset(("loopback_repair_failed", "loopback_repair_unsupported"))
+HOSTS_PATH_NOTICES = frozenset(("loopback_repair_failed", "loopback_repair_unsupported",
+    "loopback_repair_permission", "loopback_repair_timeout"))
 
 
 def hosts_path_text() -> str:
@@ -216,22 +242,31 @@ def save_loopback_hosts_lines() -> Path | None:
 
 def repair_loopback_hosts(owner_hwnd: int = 0) -> str:
     """Worker-thread body, only after explicit player consent; returns a TEXT key."""
-    error = None
+    error, outcome = None, None
     try:
         from tools.loopback_certificate import request_elevated_repair, unresolved_loopback_hosts
+        # A manual repair or changed resolver may already have fixed the names.
+        # Do not request UAC or rewrite a working (possibly read-only) hosts file.
+        if not unresolved_loopback_hosts():
+            return "loopback_repair_done"
         outcome = request_elevated_repair(ROOT, owner_hwnd=owner_hwnd)
-        if outcome == "ok":
-            # Re-verify unelevated: a VPN/resolver may still bypass the hosts file.
-            code = "loopback_repair_unresolved" if unresolved_loopback_hosts() else "loopback_repair_done"
+        if outcome == "cancelled":
+            code = "loopback_repair_cancelled"
+        elif not unresolved_loopback_hosts():
+            # Resolution is decisive even when a helper's final status was lost.
+            code = "loopback_repair_done"
         else:
-            code = {"cancelled": "loopback_repair_cancelled",
+            code = {"ok": "loopback_repair_unresolved", "permission": "loopback_repair_permission",
+                    "timeout": "loopback_repair_timeout",
                     "unsupported": "loopback_repair_unsupported"}.get(outcome, "loopback_repair_failed")
     except Exception as caught:
         error, code = caught, "loopback_repair_failed"
     if code != "loopback_repair_done":
         if code != "loopback_repair_cancelled":
             save_loopback_hosts_lines()
-        diagnostics().event("operation_failed", "repair_hosts", error=error, code=code, crash=False)
+        diagnostics().event("operation_failed", "repair_hosts", error=error, code=code, crash=False,
+            repair_stage=getattr(outcome, 'stage', None), windows_error=getattr(outcome, 'winerror', None),
+            helper_exit=getattr(outcome, 'exit_code', None))
     return code
 
 

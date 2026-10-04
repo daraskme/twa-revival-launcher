@@ -73,6 +73,8 @@ class NativePrivateXmppNotifier:
             return recipients
 
     def _send(self, event: str, game_id: str, payload: object) -> int:
+        if event == 'chat_room' and payload is None:
+            return self.probe.send_private_chat_room(game_id)
         if event == "human_joined":
             return self.probe.send_private_human_joined(game_id, payload)
         if event == "human_removed":

@@ -64,6 +64,63 @@ def _pem(kind, data):
             + f'\n-----END {kind}-----\n').encode('ascii')
 
 
+class LoopbackCertificateError(RuntimeError):
+    code = 'loopback_tls_failed'
+
+
+def _validate_certificate(directory):
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(directory / 'cert.pem', directory / 'key.pem')
+
+
+def ensure_certificate(directory):
+    """Repair installation-local TLS before starting the bridge, under its lock.
+
+    Valid keys are retained. Incomplete/invalid pairs are kept in a sibling
+    backup before replacement. This never modifies hosts or the OS trust store.
+    """
+    directory = Path(os.path.abspath(directory))
+    temporary = directory.with_name('.' + directory.name + '-new-' + os.urandom(12).hex())
+    backup = directory.with_name(directory.name + '-previous-' + os.urandom(12).hex())
+    try:
+        for path in (directory, *directory.parents):
+            if os.path.lexists(path):
+                if path.is_symlink() or getattr(path.lstat(), 'st_file_attributes', 0) & 0x400:
+                    raise OSError('linked certificate directory')
+        if directory.exists():
+            if not directory.is_dir():
+                raise OSError('invalid certificate directory')
+            for path in directory.iterdir():
+                if (path.name not in ('cert.pem', 'key.pem') or not path.is_file()
+                        or path.is_symlink()
+                        or getattr(path.lstat(), 'st_file_attributes', 0) & 0x400):
+                    raise OSError('unexpected certificate directory contents')
+            try:
+                _validate_certificate(directory)
+                return False
+            except (OSError, ValueError):
+                pass
+        create(temporary)
+        _validate_certificate(temporary)
+        had_previous = directory.exists()
+        if had_previous:
+            os.rename(directory, backup)
+        try:
+            os.rename(temporary, directory)
+        except OSError:
+            if had_previous:
+                os.rename(backup, directory)
+            raise
+        return True
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+        raise LoopbackCertificateError('local TLS preparation failed') from error
+    finally:
+        if temporary.is_dir():
+            for name in ('cert.pem', 'key.pem'):
+                (temporary / name).unlink(missing_ok=True)
+            temporary.rmdir()
+
+
 def create(directory):
     directory = Path(directory)
     if os.name != 'nt' or directory.exists():
@@ -253,6 +310,14 @@ def repair_loopback_hosts_main() -> int:
     return 0
 
 
+class RepairOutcome(str):
+    """Public outcome plus bounded Windows failure metadata, never raw messages."""
+    def __new__(cls, outcome, *, stage=None, winerror=None, exit_code=None):
+        value = super().__new__(cls, outcome)
+        value.stage, value.winerror, value.exit_code = stage, winerror, exit_code
+        return value
+
+
 def request_elevated_repair(root: Path, *, owner_hwnd: int = 0, timeout: float = 180.0,
                             _verb: str = 'runas', _parameters: str | None = None) -> str:
     """Run repair_loopback_hosts_main elevated once the player agreed; blocks.
@@ -307,19 +372,21 @@ def request_elevated_repair(root: Path, *, owner_hwnd: int = 0, timeout: float =
     initialized = ole32.CoInitializeEx(None, 0x2 | 0x4) >= 0
     try:
         if not execute(ctypes.byref(info)):
-            return 'cancelled' if ctypes.get_last_error() == 1223 else 'failed'
+            error = ctypes.get_last_error()
+            return RepairOutcome('cancelled' if error == 1223 else 'failed', stage='start', winerror=error)
     finally:
         if initialized:
             ole32.CoUninitialize()
     if not info.hProcess:
-        return 'failed'
+        return RepairOutcome('failed', stage='process_handle')
     try:
         state = kernel32.WaitForSingleObject(info.hProcess, min(max(int(timeout * 1000), 0), 0xFFFFFFFE))
         if state == 0x00000102:
-            return 'timeout'
+            return RepairOutcome('timeout', stage='wait')
         code = wintypes.DWORD()
         if state != 0 or not kernel32.GetExitCodeProcess(info.hProcess, ctypes.byref(code)):
-            return 'failed'
-        return {0: 'ok', 3: 'permission', 4: 'unsupported'}.get(code.value, 'failed')
+            return RepairOutcome('failed', stage='wait', winerror=ctypes.get_last_error())
+        return RepairOutcome({0: 'ok', 3: 'permission', 4: 'unsupported'}.get(code.value, 'failed'),
+                             stage='helper_exit', exit_code=code.value)
     finally:
         kernel32.CloseHandle(info.hProcess)

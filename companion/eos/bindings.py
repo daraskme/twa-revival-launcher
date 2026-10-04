@@ -472,7 +472,11 @@ class EosSdk:
             raise EosBindingError(
                 f"Failed to load {dll_path} (wrong architecture? this process is "
                 f"{ctypes.sizeof(ctypes.c_void_p) * 8}-bit): {exc}",
-                code=("runtime_dependency_missing" if getattr(exc, "winerror", None) == 126
+                # ctypes in Python 3.11 rewrites Windows error 126 as a
+                # FileNotFoundError without retaining its winerror attribute.
+                # The SDK itself was checked above, so this means a dependency.
+                code=("runtime_dependency_missing" if (getattr(exc, "winerror", None) == 126
+                                                       or isinstance(exc, FileNotFoundError))
                       else "runtime_invalid"),
             ) from exc
         self._bind()

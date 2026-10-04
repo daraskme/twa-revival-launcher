@@ -1,767 +1,797 @@
 {
-  "schemaVersion": 1,
-  "kind": "launcher",
   "channel": "stable",
-  "version": "0.2.25",
-  "createdAt": 1789780647561,
-  "publicKeyId": "2751aa46b0af141c",
+  "createdAt": 1790976774623,
   "files": [
     {
       "path": "NOTICE.txt",
       "sha256": "a000d0d3c055bc090d3c1043542e58f26f5f1e072eccede516bd2fbed97f22cd",
       "size": 66695,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/NOTICE.txt"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/NOTICE.txt"
     },
     {
       "path": "catalog/catalog.json",
       "sha256": "bfdbda50c7033e0e26123d353d2e13c0f6505286723fc91ec24d0e3b74767f34",
       "size": 33894,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/catalog/catalog.json"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/catalog/catalog.json"
     },
     {
       "path": "catalog/f2p_item_ids.json",
       "sha256": "db97d4a8ad80aa00db57c75589054c94babb2dc4ff89d88cb7600988ad243d2a",
       "size": 62170,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/catalog/f2p_item_ids.json"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/catalog/f2p_item_ids.json"
     },
     {
       "path": "catalog/native_battle_consumables.json",
       "sha256": "a0c1751737f668c7c70a374cb68faf427a6d42f8b157b5d1e855d65519c5b35e",
       "size": 603719,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/catalog/native_battle_consumables.json"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/catalog/native_battle_consumables.json"
     },
     {
       "path": "catalog/native_battle_maps.json",
       "sha256": "c0c1675a98c63e7e35aefbb6e572d1622d3270e502d222b293673d66bbc4cf91",
       "size": 2282,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/catalog/native_battle_maps.json"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/catalog/native_battle_maps.json"
     },
     {
       "path": "catalog/native_commander_talents.json",
       "sha256": "ddfbda6f92ff07800e9743f0b27e15e83890a195120596a291093e5c254ed35a",
       "size": 362846,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/catalog/native_commander_talents.json"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/catalog/native_commander_talents.json"
     },
     {
       "path": "catalog/native_hangar.json",
       "sha256": "70bf185dddde41f567df185e4d7c10f32d19bd2bff1fd32ad30788274c2b689e",
       "size": 1300628,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/catalog/native_hangar.json"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/catalog/native_hangar.json"
     },
     {
       "path": "catalog/native_matchmaking.json",
       "sha256": "16f8b3ff8448e041b3bedf579f34d86a1685ea55a77e4193f69d9d7e32afd01d",
       "size": 386,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/catalog/native_matchmaking.json"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/catalog/native_matchmaking.json"
     },
     {
       "path": "catalog/native_postbattle_map_aliases.json",
       "sha256": "1de6a619dc848e3991ee1bb9574924c0c083ac8d93e12faca2b1de3800a29a9c",
       "size": 908,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/catalog/native_postbattle_map_aliases.json"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/catalog/native_postbattle_map_aliases.json"
     },
     {
       "path": "catalog/native_unit_abilities.json",
-      "sha256": "ab161f5f676231af07471b142ff77f7947d01ffab0f6c28b0e227bd9c18ad966",
+      "sha256": "e9913a5ec02aab020b13ca4de2620a7d8cd0c54ca6cfa876fc8876d91e2c29ff",
       "size": 644475,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/catalog/native_unit_abilities.json"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/catalog/native_unit_abilities.json"
     },
     {
       "path": "catalog/native_unit_equipment.json",
       "sha256": "540542ba78b2c0aa259f9d0dde23622731f29217b703ccf2806bc5a60ad91899",
       "size": 2869304,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/catalog/native_unit_equipment.json"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/catalog/native_unit_equipment.json"
     },
     {
       "path": "catalog/official_mappings.json",
       "sha256": "aa71f1a7c48c04705e48bd4cc4a39a5843c1cff12f717d0294217ed1b2090a86",
       "size": 2121574,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/catalog/official_mappings.json"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/catalog/official_mappings.json"
     },
     {
       "path": "companion/VERSION",
-      "sha256": "575319fa2b37e219385d7c031940542506ddc44da5421e9ea749b7b66e4d5822",
+      "sha256": "f918f822180c399c25db94c46159b73c5b434ec7a86982e51c6a624d49496bc5",
       "size": 7,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/VERSION"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/VERSION"
     },
     {
       "path": "companion/__init__.py",
       "sha256": "65eb82097a9ff542fb52101052f4aff57f7384a2d3343017cc2fc2caf84a1846",
       "size": 864,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/__init__.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/__init__.py"
     },
     {
       "path": "companion/_ed25519.py",
       "sha256": "629e3bd7ca4f4a713259ffde80f0a51d60500672f6bcd04e58b2af4d1d5c7305",
       "size": 5217,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/_ed25519.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/_ed25519.py"
     },
     {
       "path": "companion/api_client.py",
-      "sha256": "695f9f1a4bf6c876e2f1661ff4aae02ecf783e942156d613226149322a3bca14",
-      "size": 28228,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/api_client.py"
+      "sha256": "013278ceabb699da8f22318c1acf7b9cb62b69820541eeac5f50a6c28d512883",
+      "size": 31716,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/api_client.py"
     },
     {
       "path": "companion/auth.py",
-      "sha256": "f7d07d1a362d41233922ceb3ccc59f809f2f9c98da84250a2d060e0231869eab",
-      "size": 1827,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/auth.py"
+      "sha256": "62ea85e35a41e253ba4385e43ae31d85e743b157e15b1a0ae28130f55ba1ef02",
+      "size": 3489,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/auth.py"
     },
     {
       "path": "companion/base_download.py",
       "sha256": "eca4a54da19223f8aaad4f0c07cb5a29c472e4a927fde78aefb884f6b5a739c2",
       "size": 14807,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/base_download.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/base_download.py"
     },
     {
       "path": "companion/bridge_child.py",
       "sha256": "bfd6b0c65b71ddd8ef842cae3020966248d0d44c03c897c1a3da48d1990cada0",
       "size": 12404,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/bridge_child.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/bridge_child.py"
     },
     {
       "path": "companion/bridge_protocol.py",
       "sha256": "42fea8d04c41de99dc93772c32a9e3a97c67f0781bec92128624f31267974fed",
       "size": 4340,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/bridge_protocol.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/bridge_protocol.py"
     },
     {
       "path": "companion/client_lock.py",
       "sha256": "9a9e2edcd2638443529fe5116155259718653a60f29a8c3a9c2dab5adbd5b54c",
       "size": 6132,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/client_lock.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/client_lock.py"
     },
     {
       "path": "companion/config.py",
-      "sha256": "d672baf65e163e512b6ea376cde77091c196d9863f6d7f2ac17e07b5fd9602cf",
-      "size": 6679,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/config.py"
+      "sha256": "4719f70735828532fa168552511ac8954f41185143065474526b5d1972601c87",
+      "size": 7043,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/config.py"
     },
     {
       "path": "companion/diagnostics.py",
-      "sha256": "9a3cf57b619e3771662f64e5e937827da90731ec4eec9c06a450856a9aaa0d1c",
-      "size": 14836,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/diagnostics.py"
+      "sha256": "a6961d2777dca5407da5b16fd9e2d6caf771f7c91d0e9629df1e7a150bcfda62",
+      "size": 15850,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/diagnostics.py"
     },
     {
       "path": "companion/eos/__init__.py",
       "sha256": "1a8c7a9ac2b4803c4298314d1b844fc6b6eab1fb5f97ee4cd0c2b11875fd190d",
       "size": 1259,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/eos/__init__.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/eos/__init__.py"
     },
     {
       "path": "companion/eos/bindings.py",
-      "sha256": "bf482ceb543498bec8a7c3f46a4623456c16be92aac3a7534e4b295ced1b6801",
-      "size": 22512,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/eos/bindings.py"
+      "sha256": "33f0cd9497820d8856ff48187a4c3cb64e008bba3adc719d3da464044ac89480",
+      "size": 22835,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/eos/bindings.py"
     },
     {
       "path": "companion/eos/session.py",
       "sha256": "f83cadad8587899d08749daf58e5a5b44cba0873d9dc3914317be7ed21304872",
       "size": 27808,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/eos/session.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/eos/session.py"
     },
     {
       "path": "companion/launch_preparation.py",
-      "sha256": "af15ca57741fb4d611afe9edd21ea9224842392dd05d27e3a232bd98a3b4e0f5",
-      "size": 32893,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/launch_preparation.py"
+      "sha256": "c6caba3770c93614ba824528376c62109b334e2b4e401422b08a9a78fd9b523c",
+      "size": 41732,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/launch_preparation.py"
     },
     {
       "path": "companion/launcher.py",
       "sha256": "90f2587be0b8ddabedd53feb39819acb799a5af66b49f4c3d5ebfa794cbbe8db",
       "size": 29993,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/launcher.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/launcher.py"
     },
     {
       "path": "companion/maintenance.py",
       "sha256": "348b3a7d07dc5d0edba682ba9a53dde04cfdeb8b7c4efc4ce9880c95b3ee2468",
       "size": 2587,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/maintenance.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/maintenance.py"
     },
     {
       "path": "companion/manifest.py",
-      "sha256": "26d9c5d3a156737109280f163c25cb0ed0443ef053fea12797793591491908e4",
-      "size": 8909,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/manifest.py"
+      "sha256": "ae2a2546cdd237dfe5fe5133d5787a604aedc047d13bc09dab6c2cec52751965",
+      "size": 9175,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/manifest.py"
     },
     {
       "path": "companion/native_helper_protocol.py",
-      "sha256": "25f37938847465dd99fee0c272b77257f1a6fd1e5fddbc4f6a711ee8f0d5f517",
-      "size": 1688,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/native_helper_protocol.py"
+      "sha256": "97e82b081771834f7461f75cd773c7b19381b9643a69f2ec446599b0da05f2d6",
+      "size": 1756,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/native_helper_protocol.py"
     },
     {
       "path": "companion/native_launch.py",
-      "sha256": "a704b9bb7d9e6b39dbc1f11893a872df25fdacfc53ce2b6bffa1cc537eff2d0e",
-      "size": 43989,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/native_launch.py"
+      "sha256": "4431156af07761fbcd90cad684d4f8a905ad7b893f99db08b02842ad90b24d0f",
+      "size": 45697,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/native_launch.py"
+    },
+    {
+      "path": "companion/native_update.py",
+      "sha256": "9e5318a6946c0e1f302dd2be91e9c5040effb080548994a634e22fc05e098532",
+      "size": 21469,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/native_update.py"
     },
     {
       "path": "companion/player_language.py",
       "sha256": "36d3b85d2daf32dc3c32754b84c8a6d206e8402faf27ce93804dda4ca81e3b9b",
       "size": 4600,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/player_language.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/player_language.py"
     },
     {
       "path": "companion/player_name.py",
       "sha256": "0b6eff9f40c751aef9fdf1fb491262716592beac8370f538954800a4515907c6",
       "size": 1017,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/player_name.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/player_name.py"
     },
     {
       "path": "companion/player_release.py",
-      "sha256": "8c82b164be65dfb8a1e02bea2270412db66fc5a0875e482357cabb9c26501813",
-      "size": 16738,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/player_release.py"
+      "sha256": "83d8aa75016e27fa2049fcd0e6650e811c34c864e8d9554bb53b5a1cbd0ef57e",
+      "size": 18239,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/player_release.py"
     },
     {
       "path": "companion/player_session.py",
-      "sha256": "b3b68a1854b38b81aaf901a264bf3e8f588375e0f82eb0d1ec472cf023697710",
-      "size": 4702,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/player_session.py"
+      "sha256": "8962daa492dfd06475274feca0f27e0da2f95ee91551eb33a71d665b3d1b08ca",
+      "size": 5197,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/player_session.py"
+    },
+    {
+      "path": "companion/renderer_probe.py",
+      "sha256": "6325975f927a9225080d341a5fc38af731a4c8fd421bb3e6326d711f98efd1a7",
+      "size": 16847,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/renderer_probe.py"
     },
     {
       "path": "companion/self_updater.py",
       "sha256": "1b6ad7f832dda0e9ee50cc75c44e93cc39fb865765b53eb274f13f8e147d42be",
       "size": 25631,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/self_updater.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/self_updater.py"
     },
     {
       "path": "companion/startup_gate.py",
-      "sha256": "16c07752247fa8aca2d1d7fddc0042ee2916ed2b277fdaf1df733feb2ab5d252",
-      "size": 28436,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/startup_gate.py"
+      "sha256": "1a9834513eb0cfa3e8dbfcbf1d3e15ab5ad13f739e638a2ec12ba51b6f5cb5ab",
+      "size": 32772,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/startup_gate.py"
+    },
+    {
+      "path": "companion/texture_memory_compat.py",
+      "sha256": "725b0351c3ea6ff65f2720207baba38264f05496e313bd3ff535f40545f79312",
+      "size": 28407,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/texture_memory_compat.py"
     },
     {
       "path": "companion/trusted_keys.py",
       "sha256": "80adf84227efe426738ad9a853aa808ded7d57d648d8c8154816c9245860c345",
       "size": 3210,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/trusted_keys.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/trusted_keys.py"
     },
     {
       "path": "companion/updater.py",
-      "sha256": "605c92ec706e889e20ce935145c0ab3c9ad5fa0c6ef9cb5229135c3069478efa",
-      "size": 31102,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/companion/updater.py"
+      "sha256": "21ac6a2558e00ea8256833bac6cef3e7faeec7c2c30733e149cae727fb071374",
+      "size": 32603,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/companion/updater.py"
     },
     {
       "path": "server/battle_api.py",
       "sha256": "eda0e2409250ce89d6fb828f37e1cab7c08b3c5528cd77429dbd6dc7b3e6a880",
       "size": 30117,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/battle_api.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/battle_api.py"
     },
     {
       "path": "server/commander_specialization_policy.py",
       "sha256": "581c1d58894994eef43afa80334fb8c4b3a952facd05c96500df19cde10d897e",
       "size": 9804,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/commander_specialization_policy.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/commander_specialization_policy.py"
     },
     {
       "path": "server/companion_bridge.py",
-      "sha256": "e1a9f196d78adf0a7f366fcdc540cdeafe9a95c1ddf43f84998d9971bbfaa0c6",
-      "size": 60544,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/companion_bridge.py"
+      "sha256": "4a0744fa46e594b0dac98f4846ef0c834eaeb418ff3fa69d01f5e0fb3f3a45f1",
+      "size": 60761,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/companion_bridge.py"
     },
     {
       "path": "server/economy_backend.py",
-      "sha256": "7a842192692178bbb5e9db58cfeb891fa9bcc4e1a5c521e7a32edd16f88d82b0",
-      "size": 17965,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/economy_backend.py"
+      "sha256": "bb4e2d2d8848d160451137e9bbd6e3ba1a6acbe9a8c0230130fd4790fbe6c4ef",
+      "size": 22525,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/economy_backend.py"
     },
     {
       "path": "server/f2p_fake.py",
-      "sha256": "f333bc7bb37ae64297202978877755416de39d126c7b0f625d1e844bdc2068e1",
-      "size": 69766,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/f2p_fake.py"
+      "sha256": "e7a27b2196873585f4e72dc27a7113819d497030c1bff9a4e9e2b8f8bf1e7e6a",
+      "size": 70490,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/f2p_fake.py"
     },
     {
       "path": "server/local_battle_state.py",
       "sha256": "82f27b4f927a461df94558b085b76203441b0d8f690d66d30c8ab83209627e45",
       "size": 33926,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/local_battle_state.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/local_battle_state.py"
     },
     {
       "path": "server/local_economy.py",
-      "sha256": "e516baa42e84494ef1788c9aac90e922ca3e76af35bb7263e258fdb5377d319f",
-      "size": 190708,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/local_economy.py"
+      "sha256": "7ae07e24ab68ee422c745dc29948e89f9e0652a3b55dfc02934ec173d2be3651",
+      "size": 195204,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/local_economy.py"
     },
     {
       "path": "server/local_stack.py",
       "sha256": "cc75696e28e4a44d1c58bef988383d4d73434c879be9af3586a7380d708b8bba",
       "size": 60850,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/local_stack.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/local_stack.py"
     },
     {
       "path": "server/native_auto_announcer.py",
       "sha256": "5f0795371480c8e0dbcfb39d8fc7b57817c4a75005ea4f08a5aee2134f2d503a",
       "size": 5410,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_auto_announcer.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_auto_announcer.py"
     },
     {
       "path": "server/native_battle_maps.py",
       "sha256": "9d46c26cf2cc3fa999add8a236637f1287413a2e742b0d114e026a79ccb6f5c8",
       "size": 6972,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_battle_maps.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_battle_maps.py"
     },
     {
       "path": "server/native_battle_probe.py",
-      "sha256": "b10e1f314591781dcd02ecf295bfef7ff833e2f1a383dc4ee9ac256eb06887ee",
-      "size": 66578,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_battle_probe.py"
+      "sha256": "79acb316e66fa0c51949e811afad015831e689b74b98fbc643a0af1814880016",
+      "size": 67830,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_battle_probe.py"
     },
     {
       "path": "server/native_battle_roster.py",
-      "sha256": "34e513d24741ede9af5882218f30fd3a23b296f22f52721c6a8e4f32a1f2efec",
-      "size": 16973,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_battle_roster.py"
+      "sha256": "9e8d4baab967aa9534f64a3a29253c16966165bde5673bef7dad1baf056ef59e",
+      "size": 20977,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_battle_roster.py"
     },
     {
       "path": "server/native_career_history.py",
       "sha256": "6c5da18b3cc1c7be1a9cd9f25e9da9b7b8aa9057613e3cda18ad4bc64e4f3171",
       "size": 6310,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_career_history.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_career_history.py"
     },
     {
       "path": "server/native_career_profile.py",
       "sha256": "f95657a28474049e8edafd5b93c98341662aa2f599f386bf51c8e025b4be03ce",
       "size": 8934,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_career_profile.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_career_profile.py"
     },
     {
       "path": "server/native_career_response.py",
       "sha256": "4bcf39a9af61dc421fd21625b5c28b37594957a2f60a970bdd381de10f43d22d",
       "size": 1758,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_career_response.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_career_response.py"
     },
     {
       "path": "server/native_career_stats.py",
       "sha256": "81fe0ade1c689e12d22e8dcb6c3e8ff29f6af66d6ad31e58f3834598cb9f5d65",
       "size": 18571,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_career_stats.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_career_stats.py"
     },
     {
       "path": "server/native_cloud_career.py",
       "sha256": "167d6e3b0bea54ffc8280315dc1277ffcf945413520b69e010ce432a506ed5dc",
       "size": 22914,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_cloud_career.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_cloud_career.py"
     },
     {
       "path": "server/native_cloud_loadout.py",
       "sha256": "c6aaeaad53f180f1d4690998491f25df510a49e1067abafbee72f90816690d8c",
       "size": 5453,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_cloud_loadout.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_cloud_loadout.py"
     },
     {
       "path": "server/native_commander_talents.py",
       "sha256": "ad5df0456b8d0d4971299180ae8ed505c0447044b2e715c55b1fb88ef0c79292",
       "size": 15359,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_commander_talents.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_commander_talents.py"
     },
     {
       "path": "server/native_connection_probe.py",
-      "sha256": "dbeb16cf03128e737743f6934368890626ee20ad4924f430668ccb3b721179e5",
-      "size": 191368,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_connection_probe.py"
+      "sha256": "8717a266c9c1cc4c4fc38ba25d981ded7f0923e717eadc0398024dfad0ecf6de",
+      "size": 195235,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_connection_probe.py"
     },
     {
       "path": "server/native_consumables.py",
       "sha256": "f49a02f77eb889bbeb0032adab3b146652567e86724277f4f0f24c19bb1bbc22",
       "size": 27248,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_consumables.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_consumables.py"
     },
     {
       "path": "server/native_custom_lobby.py",
       "sha256": "3f2d8fb0b69eec50387cbc08f488e4514b6b5c3fdeefc2249ee1364ebf659c64",
       "size": 69735,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_custom_lobby.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_custom_lobby.py"
     },
     {
       "path": "server/native_economy_adapter.py",
-      "sha256": "393831143fc8c20be497b5a85b0fe4a1c48df5aca90820c1d5e2dbae5605120d",
-      "size": 140185,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_economy_adapter.py"
+      "sha256": "407c6ca9537f6a79c28bdc71e2d3721e22bf2126395c4147db58e711aeb8b609",
+      "size": 147678,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_economy_adapter.py"
     },
     {
       "path": "server/native_economy_service.py",
-      "sha256": "ca6ede0ae2168f47cbe478d7b2c11451f93f12e42026156c46ffa6bf42fa2d1c",
-      "size": 155656,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_economy_service.py"
+      "sha256": "3d6cc18dbc471391e146efab77155d672811a65bb7e1e5b5844ada867fea7fc7",
+      "size": 155996,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_economy_service.py"
     },
     {
       "path": "server/native_equipment.py",
       "sha256": "6204bec6272eb0bfee475641e35603f696534059e2999dfba56086e75c9ccb05",
       "size": 20188,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_equipment.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_equipment.py"
     },
     {
       "path": "server/native_identity.py",
       "sha256": "319ba46726651e82da60d3651b0b868034675fe1170af474706db66d610e3d05",
       "size": 13494,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_identity.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_identity.py"
     },
     {
       "path": "server/native_matchmaking.py",
-      "sha256": "3190bbbcc60bb8c155d825efa48b3751320b21238f15547c19dca08c4f61eb26",
-      "size": 102238,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_matchmaking.py"
+      "sha256": "ab9ec35546ecc5f428db3b25af9f442e43ec12426b957e86aa2107d78676d947",
+      "size": 104491,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_matchmaking.py"
     },
     {
       "path": "server/native_party_admission.py",
-      "sha256": "8b973b355b5cb9fc7a20f53b9e82149dd930ed6b925e76ee382ee3e177c4b142",
-      "size": 28115,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_party_admission.py"
+      "sha256": "92f7f5c8b78d090afaffbd72a257336af60e5fbac04ff3f7828198834a2a0fec",
+      "size": 29264,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_party_admission.py"
     },
     {
       "path": "server/native_party_loadout_sync.py",
       "sha256": "788a073fa070918db37d073ce92a7f8d5991d247975925b77ad62231a7e7e4cb",
       "size": 13566,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_party_loadout_sync.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_party_loadout_sync.py"
     },
     {
       "path": "server/native_party_play.py",
       "sha256": "22babbfd8e01d1f6078681254e17ec97394074fa6a0098f9536bc0b83026585b",
       "size": 16624,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_party_play.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_party_play.py"
     },
     {
       "path": "server/native_party_selection_binding.py",
       "sha256": "ebfef1ed663e2969f2fc7e9a3f1cf68f6e167bd57e9665f25a873280d276728c",
       "size": 7206,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_party_selection_binding.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_party_selection_binding.py"
     },
     {
       "path": "server/native_postbattle_maps.py",
       "sha256": "176ba02570328c67f07346cef5be544b2a7b9f9195b1e7cd0c407cff67522f7b",
       "size": 4635,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_postbattle_maps.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_postbattle_maps.py"
     },
     {
       "path": "server/native_private_binding.py",
       "sha256": "f1db5dc4ac9c94700e29241e0329a93086cd2930838ea4bbc90df8fe9dda4509",
       "size": 15850,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_private_binding.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_private_binding.py"
     },
     {
       "path": "server/native_private_cloud.py",
-      "sha256": "b698fd433c03644f8fdb1f158f30811314ac96f8311e196ccc54f0ce68b1876a",
-      "size": 65647,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_private_cloud.py"
+      "sha256": "f292786e377bcdfe3a44094ba264a69e5d8a76804ed3b5cf57509ba414150741",
+      "size": 66196,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_private_cloud.py"
     },
     {
       "path": "server/native_private_coordinator.py",
       "sha256": "52664e73c70e178ae2458b00b9bd8775ad390578b94cb28f21a283e6980cdf39",
       "size": 16500,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_private_coordinator.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_private_coordinator.py"
     },
     {
       "path": "server/native_private_cpu_contract.py",
       "sha256": "61e0454be7aa3f50324391590e78daf077a7dc2fa32e2bbf1b56346e4c5316d9",
       "size": 7906,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_private_cpu_contract.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_private_cpu_contract.py"
     },
     {
       "path": "server/native_private_cpu_notifications.py",
       "sha256": "264c9cd12a0fd5d371b65e214a446616fe948836cb5bad47ea3b750d56e0cab5",
       "size": 10070,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_private_cpu_notifications.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_private_cpu_notifications.py"
     },
     {
       "path": "server/native_private_notifier.py",
-      "sha256": "9947e710e462c98be438755226ab767a74092559990ee58d88c335723d37b413",
-      "size": 4062,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_private_notifier.py"
+      "sha256": "adee195819a5582d7b4e5782fff5e73181df4a0383b38b5a50fee17c20cb3dfc",
+      "size": 4176,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_private_notifier.py"
     },
     {
       "path": "server/native_private_rematch_contract.py",
       "sha256": "a3acc653394c2b15138c480a758c87ca0ffdb6ed7c87a9e67a1bd1fccbddacae",
       "size": 5324,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_private_rematch_contract.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_private_rematch_contract.py"
     },
     {
       "path": "server/native_private_results.py",
-      "sha256": "d423be693b378bc23372a966caad9ccc93c2703bd6860df92f8bec6539ef2833",
-      "size": 14915,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_private_results.py"
+      "sha256": "97e92f294eecff1b03b30a920afda38d7fc3cfd6862f061ac4c39ea445c9d229",
+      "size": 15205,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_private_results.py"
     },
     {
       "path": "server/native_private_runtime.py",
-      "sha256": "02be46e7abe46418232b48525fa53ed21a34824082a025eb5ef554ef422903db",
-      "size": 10809,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_private_runtime.py"
+      "sha256": "20d5ab4bf35f004df427f8c0fffd16d2e22a2cbd80969514ee3558fddd86b43c",
+      "size": 11049,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_private_runtime.py"
     },
     {
       "path": "server/native_pvp_coordinator.py",
-      "sha256": "73b61ac69d2ac77ef2aa424ef1cd04c9c29fd8fc446a0972be62bfc944eb9447",
-      "size": 63325,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_pvp_coordinator.py"
+      "sha256": "a9ed00993322340753a5e1594795928d0df31f5da1b3c77e9127098dc3bb8182",
+      "size": 66090,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_pvp_coordinator.py"
     },
     {
       "path": "server/native_recent_players.py",
       "sha256": "2b83c7dc770990190542eb03a4444bbb9db0159b57869a0e5fecc46ebc71c8ef",
       "size": 9781,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_recent_players.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_recent_players.py"
     },
     {
       "path": "server/native_recent_projection.py",
       "sha256": "28697bde3189492681b5acc50df5e1e5245f7b650f538bae9ce4c328e8e388e2",
       "size": 8778,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_recent_projection.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_recent_projection.py"
     },
     {
       "path": "server/native_recent_storage.py",
       "sha256": "d2dea1dab7102dea1309f117204c609b602ca9327df25ddde0d04c495c13da79",
       "size": 6422,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_recent_storage.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_recent_storage.py"
     },
     {
       "path": "server/native_region_ping.py",
       "sha256": "a8471e309239e0e6fbf2c25040974b98bbd3a440388182fd2e502aa8a21d751a",
       "size": 4359,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_region_ping.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_region_ping.py"
     },
     {
       "path": "server/native_relay_probe.py",
       "sha256": "4d50b7d54c0b59b84820fd79e61989588c7b36ef7dd5e0371c26140afd87806a",
       "size": 12224,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_relay_probe.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_relay_probe.py"
     },
     {
       "path": "server/native_relay_ws_bridge.py",
       "sha256": "4aeb3aef17763e521f20bcf77962f1eda1e406036f424bff940512c46ff974b0",
       "size": 34548,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_relay_ws_bridge.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_relay_ws_bridge.py"
     },
     {
       "path": "server/native_social.py",
-      "sha256": "020237b7c771a69ce6d26a9ea9fc1c674aaa8742015a1f70ee23206203006930",
-      "size": 13481,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_social.py"
+      "sha256": "1f5d27d8b7fc533fe1d83d1f3b083fb8536c778e2df5529b02b1e1fff397a3b1",
+      "size": 20362,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_social.py"
     },
     {
       "path": "server/native_social_party.py",
-      "sha256": "bb218ddc4f32e7bd59549b189c0b9b0cd224e3f4c8d3e8822a1193c8316c5ddd",
-      "size": 31885,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_social_party.py"
+      "sha256": "9a7b79bb355fa1a5dfd07e57937f76f1806c70d1febcbbc50dbe67ee0c7fd68b",
+      "size": 32117,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_social_party.py"
     },
     {
       "path": "server/native_social_party_runtime.py",
       "sha256": "b1469161e97a9e319477acc138939da1708fedfcdb3c0f0598bd2af7809b4bf8",
       "size": 16496,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_social_party_runtime.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_social_party_runtime.py"
     },
     {
       "path": "server/native_unit_abilities.py",
       "sha256": "8064b3f41e4f66cee2b60d779417f69e1a0b8a9c045152d1f0d757c0332c834a",
       "size": 11658,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_unit_abilities.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_unit_abilities.py"
     },
     {
       "path": "server/native_user_storage.py",
       "sha256": "4ea3c4693f67136e4070e38602ce5d63b58c661fc01e6eba69d599e6c44abf82",
       "size": 11335,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_user_storage.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_user_storage.py"
     },
     {
       "path": "server/native_xmpp_probe.py",
-      "sha256": "38d97ee61d23c847dc8c329875d2db2047bb80ed840c90eeaeadcfe385588b56",
-      "size": 46446,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/native_xmpp_probe.py"
+      "sha256": "b32612f52a7c2b91b27d28709a1cc6abdfe44b4f97f4e82a273ae7f26acdf7f5",
+      "size": 52730,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/native_xmpp_probe.py"
     },
     {
       "path": "server/profile_selection.py",
       "sha256": "6d99db2077b4173ceeb15add58d201374803c81e842ba9a2ee685ecebecd22e8",
       "size": 9031,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/profile_selection.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/profile_selection.py"
     },
     {
       "path": "server/specialization_economy.py",
       "sha256": "60bccf3fa9d48d09714eb1621d76ae61f93461557030a88cde8374e6d6272802",
       "size": 31713,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/specialization_economy.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/specialization_economy.py"
     },
     {
       "path": "server/specialization_ui_status.py",
       "sha256": "1a15e03a40d456372ae11529489aa6c4b8c4b474bf71289f2618caeb791c2625",
       "size": 7569,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/specialization_ui_status.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/specialization_ui_status.py"
     },
     {
       "path": "server/xmpp_stub.py",
       "sha256": "31c3f442801a488ab4f3e98709e49c32ba5c7402e77ed83a8d0d2b47fa9d5a43",
       "size": 12181,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/server/xmpp_stub.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/server/xmpp_stub.py"
     },
     {
       "path": "tools/apply_launcher_update.py",
       "sha256": "91e1450496d37a12d32d5ac30c12c340777d75c83c8689d9002263ea8458f4b7",
       "size": 3321,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/apply_launcher_update.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/apply_launcher_update.py"
     },
     {
       "path": "tools/build_native_specialization_binding.py",
       "sha256": "83af266ccdf7a33eaaa745a86ad3041e1bd670b7d4ea466b9aab59d7cc9dde3d",
       "size": 39494,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/build_native_specialization_binding.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/build_native_specialization_binding.py"
     },
     {
       "path": "tools/client_language.py",
-      "sha256": "e4873b065a154ecb6f50db96a2d91df74bca89e4a33b56267b736e1f804f2219",
-      "size": 13273,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/client_language.py"
+      "sha256": "1a098d5844f9d8a7823ba263b796d483ec2f53ac1abc65e7a7c88174ac99374c",
+      "size": 20740,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/client_language.py"
     },
     {
       "path": "tools/install_native_battle_modes.py",
       "sha256": "5a0a8c059905c5f5da264d701baeeee70c7c1e5b9d9fcc632b38723a06160186",
       "size": 45027,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/install_native_battle_modes.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/install_native_battle_modes.py"
     },
     {
       "path": "tools/install_player.py",
       "sha256": "e21b4b8ef07935aeb6974c04f320b0e231646f23b190178b056f72829c575daf",
       "size": 11224,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/install_player.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/install_player.py"
     },
     {
       "path": "tools/loopback_certificate.py",
-      "sha256": "dfe18ce6fecace1e44032ccbb25f7bfea1aafc28fab243ce7e872c0879006b73",
-      "size": 15358,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/loopback_certificate.py"
+      "sha256": "b512823cd3de38373df8a68cd075f04d6b78c1f0ef45324e70f2badccb8c5346",
+      "size": 18361,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/loopback_certificate.py"
+    },
+    {
+      "path": "tools/native_arcani_slot_fix.py",
+      "sha256": "c46e0874c74f6c38013430d00751743857d4e5c3eb0da16bc775741358e7a343",
+      "size": 28591,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/native_arcani_slot_fix.py"
     },
     {
       "path": "tools/native_career_ui.py",
-      "sha256": "2f26ba37c5b87e7d3af7807e6b665379a4f04f29ccaeed53f7d6aff417917c39",
-      "size": 11018,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/native_career_ui.py"
+      "sha256": "96415bd303dfaa6b85f753bed5c9b335423e4305d5165af9b9c58ae8f812ba6e",
+      "size": 11081,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/native_career_ui.py"
+    },
+    {
+      "path": "tools/native_fixed_family_mapper.py",
+      "sha256": "ae02f84222ff5a508132e63f65627091e09f1ab8274a755d97ba387d1782c635",
+      "size": 39597,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/native_fixed_family_mapper.py"
     },
     {
       "path": "tools/native_mode_availability.py",
-      "sha256": "1c16385d1f64fea7e44bc82ac3d04f095ad9eec7fd2dc3ca692eeff2215b6152",
-      "size": 8772,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/native_mode_availability.py"
+      "sha256": "a6c60351af152da33a40dbaa52a8fbd75d045ea73fde6ee9a1a81acfc5a45273",
+      "size": 10512,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/native_mode_availability.py"
     },
     {
       "path": "tools/native_npl_auth.py",
-      "sha256": "be4756f429a8337fce31356f1873f79a036bb8f0a288338961aa9a08cdfae043",
-      "size": 3381,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/native_npl_auth.py"
+      "sha256": "020760cc05c953c824f0711a0f0cbbbe58f431c729559a1b080dedea7397a435",
+      "size": 4899,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/native_npl_auth.py"
     },
     {
       "path": "tools/native_party_mode_sync.py",
-      "sha256": "b536cbf995b7755ff8411bef0ca70c610f22d1bed486995a7ae3018d3fa4b6a7",
-      "size": 17456,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/native_party_mode_sync.py"
+      "sha256": "59db097cd9afdd94edf1b018a1c48e702071fe5ba27c799f495cb9f81c2aeed1",
+      "size": 17588,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/native_party_mode_sync.py"
     },
     {
       "path": "tools/native_retreat_destination.py",
-      "sha256": "b49a9c9cb53c746a1b4b925ade6b75f9a5143030aebe4f90fa9cc5fbd17abd78",
-      "size": 8148,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/native_retreat_destination.py"
+      "sha256": "fd390bf6fe60dcef25d2d6657e282b9531ca7642fd1ca638133312df3a54e68d",
+      "size": 8129,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/native_retreat_destination.py"
     },
     {
       "path": "tools/native_specialization_bridge.py",
       "sha256": "92c1abf36d191dccdab706e9fc875800ac47074a90b9b7b4909ea68e6c68d18d",
       "size": 19581,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/native_specialization_bridge.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/native_specialization_bridge.py"
     },
     {
       "path": "tools/native_specialization_control.py",
       "sha256": "b98938390de030179cfd26069d2e8e257dad01d2c15b62fa4ae64802a0c3710b",
       "size": 19561,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/native_specialization_control.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/native_specialization_control.py"
     },
     {
       "path": "tools/native_specialization_presentation.py",
       "sha256": "a18b9001308cfbde9b17ca9ea7027da2533c1d63c47edf09728319603045b596",
       "size": 17257,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/native_specialization_presentation.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/native_specialization_presentation.py"
     },
     {
       "path": "tools/native_specialization_ui_status.py",
       "sha256": "382c5434a93c55e66db6f06054e1a318d45d959857604ec7de3fe99a67f6f781",
       "size": 14575,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/native_specialization_ui_status.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/native_specialization_ui_status.py"
     },
     {
       "path": "tools/native_user_preferences.py",
-      "sha256": "c50d48f946e866a6aaaea094aae43e0abe3bb2de2fca42b75d3d11384f8911d2",
-      "size": 2785,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/native_user_preferences.py"
+      "sha256": "8fea609e923313ff52a791b56834af13d81a38d575883786259f3835c36aa5e1",
+      "size": 2982,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/native_user_preferences.py"
     },
     {
       "path": "tools/original_paths.py",
       "sha256": "4977eeaedf400030252ee7ccae9a41cd221f557c87d9d755d8d035b1aede1d9d",
       "size": 1282,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/original_paths.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/original_paths.py"
     },
     {
       "path": "tools/original_safety.py",
       "sha256": "ada11253929596f7eccfa19cf4972d36f09551a98ff65b54c80899ce0c1f5739",
       "size": 5721,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/original_safety.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/original_safety.py"
     },
     {
       "path": "tools/pack_pfh5.py",
       "sha256": "a5f69615bb25cf9ba52699cd3ebaa047b7f7a0d7ce8cfdf8b4f5e90cc30cfe16",
       "size": 2850,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/pack_pfh5.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/pack_pfh5.py"
     },
     {
       "path": "tools/pin_primary_monitor.py",
       "sha256": "d92acd4592b1c7c8b05c71acbad413af85d80574c2236cf188821166da21650c",
       "size": 6954,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/pin_primary_monitor.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/pin_primary_monitor.py"
     },
     {
       "path": "tools/player_launcher.py",
-      "sha256": "740ca65cf92effa099c79cfcb35c841302850adb9b3151100037a5fa05553774",
-      "size": 43597,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/player_launcher.py"
+      "sha256": "9155e9fcfa0bca3e41fab0c46a73a157148c12e6a6ccc5293372436469f66f7b",
+      "size": 49915,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/player_launcher.py"
     },
     {
       "path": "tools/player_native_payload.py",
-      "sha256": "4ccdc2076524c198c6d5405f83c2c40bf066e7e683ab8feff949488ae3f6fef7",
-      "size": 6365,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/player_native_payload.py"
+      "sha256": "9dfb6ab729b11f20a8b0c2c7f5d64d8561dc24744e3473a078cc6a6b885e7831",
+      "size": 7083,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/player_native_payload.py"
     },
     {
       "path": "tools/player_package.py",
       "sha256": "c42ab6c7080731a56810f048b9da7d1fa5a86888b5dcd89076c093fd0dca36c8",
       "size": 12658,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/player_package.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/player_package.py"
     },
     {
       "path": "tools/player_setup.py",
       "sha256": "cf7291e5f0be028bfbe397ce254e054a39717ef95d2e04e4b16d67683d23ece6",
       "size": 21674,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/player_setup.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/player_setup.py"
     },
     {
       "path": "tools/player_ui.py",
       "sha256": "e7c87ccc0398cf70c07f66858e8ad2347f9a479cc7e8b10e563d9ca095e6065e",
       "size": 29518,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/player_ui.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/player_ui.py"
     },
     {
       "path": "tools/stage_client.py",
       "sha256": "8c0c68a08a483900029bfb6a668f947cc6dca724aa02e619720e4e770c875b60",
       "size": 14140,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/stage_client.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/stage_client.py"
     },
     {
       "path": "tools/unit_drag_bridge.py",
-      "sha256": "ee421498c928e194adf4272b639052aa76b548557fc2c3dfd1defd9c29e7330f",
-      "size": 93103,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/unit_drag_bridge.py"
+      "sha256": "53f7c8cb1683d537e56e8b942dcc348e6329d452da9abc441a94629c7690bfad",
+      "size": 163016,
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/unit_drag_bridge.py"
     },
     {
       "path": "tools/unpack_pfh5.py",
       "sha256": "8a89f99a2dde4ca195abaa5dd69f902145c8b68e0f2b4cf9178fd6a0fc082b47",
       "size": 3155,
-      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.25/tools/unpack_pfh5.py"
+      "url": "https://downloads.darask.me/v1/update/object/launcher/0.2.43/tools/unpack_pfh5.py"
     }
   ],
-  "signature": "5Rfdkvp4TD3vaDBtON30KCgJtg+2QZeGXXc/25TLRXvg2DltMnoIwsvq/XSxd+cLamCvScHV70ObsFdj8JOKCg=="
+  "kind": "launcher",
+  "publicKeyId": "2751aa46b0af141c",
+  "schemaVersion": 1,
+  "version": "0.2.43",
+  "signature": "91fUslZ+MGUauw8Tj9n2TYGzLZynkd2S9a+RFgYJXy3UmZtG1vyKDz6hE1O1odvomribzJA8ZELQFukkPjLFBw=="
 }

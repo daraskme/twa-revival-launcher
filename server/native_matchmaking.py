@@ -19,7 +19,8 @@ from urllib.parse import parse_qsl
 
 if __package__:
     from .native_battle_roster import (BattleRosterError, CpuCommander, CpuUnit,
-                                       build_battle_roster)
+                                       build_battle_roster, select_cpu_asset_palette_v3,
+                                       select_cpu_asset_palette_v4)
     from .native_custom_lobby import NativeLobbyError, decode_native_request
     from .native_battle_maps import (
         NATIVE_BATTLE_RULESET_MAPS,
@@ -36,7 +37,8 @@ if __package__:
                                         validate_native_unit_abilities)
 else:
     from native_battle_roster import (BattleRosterError, CpuCommander, CpuUnit,
-                                      build_battle_roster)
+                                      build_battle_roster, select_cpu_asset_palette_v3,
+                                      select_cpu_asset_palette_v4)
     from native_custom_lobby import NativeLobbyError, decode_native_request, analyze_active_squad
     from native_battle_maps import (
         NATIVE_BATTLE_RULESET_MAPS,
@@ -105,7 +107,8 @@ NATIVE_SELECTOR_GAME_MODES = {
 }
 
 
-def build_matchmaking_game_config(*, native_five_mode_selector: bool = False) -> dict:
+def build_matchmaking_game_config(*, native_five_mode_selector: bool = False,
+                                  public_pvp_only: bool = False) -> dict:
     """Raw, local-only display configuration, not recovered official settings.
 
     C4D470 reads these definitions before C47B20 assigns server-list display
@@ -135,9 +138,10 @@ def build_matchmaking_game_config(*, native_five_mode_selector: bool = False) ->
              'matchmaking_time_variance_s': 0}
             for wire_mode, display_type in (
                 ((wire_mode, values[2])
-                 for wire_mode, values in NATIVE_SELECTOR_GAME_MODES.items())
+                 for wire_mode, values in NATIVE_SELECTOR_GAME_MODES.items()
+                 if not public_pvp_only or values[0] == 'pvp')
                 if native_five_mode_selector else
-                (('pve', 'pve'), ('pvp', 'pvp'))
+                ((('pvp', 'pvp'),) if public_pvp_only else (('pve', 'pve'), ('pvp', 'pvp')))
             )],
     }}
 
@@ -259,6 +263,7 @@ class NativeMatchmaking:
                  cloud_coop_pve: bool = False,
                  native_five_mode_selector: bool = False,
                  disabled_rulesets: frozenset[str] = frozenset(),
+                 public_pvp_only: bool = False,
                  map_choice: Callable[[tuple[dict[str, str], ...]], object] | None = None):
         if native_user_id is not None and (not isinstance(native_user_id, str)
                                            or not 1 <= len(native_user_id) <= 36):
@@ -278,6 +283,7 @@ class NativeMatchmaking:
                 or type(pve_enabled) is not bool
                 or type(cloud_coop_pve) is not bool
                 or type(native_five_mode_selector) is not bool
+                or type(public_pvp_only) is not bool
                 or not isinstance(disabled_rulesets, frozenset)
                 or not disabled_rulesets <= BATTLE_RULESET_MAPS.keys()
                 or map_choice is not None and not callable(map_choice)
@@ -307,6 +313,7 @@ class NativeMatchmaking:
         # still fail closed for a relay this process does not provide.
         self._native_five_mode_selector = native_five_mode_selector
         self._disabled_rulesets = disabled_rulesets
+        self.public_pvp_only = public_pvp_only
         self._native = copy.deepcopy(native_hangar)
         equipment = validate_native_unit_equipment(
             load_native_unit_equipment(), self._native,
@@ -536,9 +543,11 @@ class NativeMatchmaking:
     def advertised_game_modes(self) -> tuple[str, ...]:
         """Keep locked rows in game config, but omit their availability advertisement."""
         if self._native_five_mode_selector:
-            return tuple(wire for wire, (_, ruleset, _) in NATIVE_SELECTOR_GAME_MODES.items()
-                         if ruleset not in self._disabled_rulesets)
-        return () if self._battle_ruleset in self._disabled_rulesets else ('pve', 'pvp')
+            return tuple(wire for wire, (mode, ruleset, _) in NATIVE_SELECTOR_GAME_MODES.items()
+                         if ruleset not in self._disabled_rulesets
+                         and (not self.public_pvp_only or mode == 'pvp'))
+        return (() if self._battle_ruleset in self._disabled_rulesets else
+                ('pvp',) if self.public_pvp_only else ('pve', 'pvp'))
 
     @property
     def battle_mode_selection(self) -> dict:
@@ -590,6 +599,8 @@ class NativeMatchmaking:
                         (self._selected_mode, self._battle_ruleset))
             options = []
             for preset, (mode, ruleset) in BATTLE_MODE_PRESETS.items():
+                if self.public_pvp_only and mode != 'pvp':
+                    continue
                 enabled = bool(
                     self._enabled
                     and ruleset not in self._disabled_rulesets
@@ -646,6 +657,8 @@ class NativeMatchmaking:
             _fail(400, 'invalid_battle_mode_selection')
         if ruleset in self._disabled_rulesets:
             _fail(409, 'battle_ruleset_locked')
+        if self.public_pvp_only and mode != 'pvp':
+            _fail(409, 'battle_mode_removed')
         with self._lock:
             self._mutation()
             self._expire()
@@ -739,7 +752,7 @@ class NativeMatchmaking:
             unit = deployed.get(parent)
             if unit is None:
                 _fail(503, 'invalid_deployed_unit_ability_parent')
-            if (ability['mode'] != 'additional'
+            if (ability['mode'] not in {'additional', 'default'}
                     or ability['unit'] != unit['key']):
                 _fail(503, 'invalid_deployed_unit_ability')
             if quantity != 1:
@@ -1083,6 +1096,8 @@ class NativeMatchmaking:
             _fail(403, 'native_user_mismatch')
         mode, ruleset, direct_selector = self._decode_requested_battle_mode(
             request.get('game_mode'))
+        if self.public_pvp_only and mode != 'pvp':
+            _fail(409, 'battle_mode_removed')
         if ruleset in self._disabled_rulesets:
             _fail(409, 'battle_ruleset_locked')
         if (not direct_selector and self._selected_mode is not None
@@ -1235,7 +1250,7 @@ class NativeMatchmaking:
             return ca_envelope({'result': 'cancelled'}, time.time_ns() // 1_000_000)
 
     def enter_party_attempt(self, profile: dict, *, mode: str, ruleset: str,
-                            loadout: dict) -> None:
+                            loadout: dict, expected_generation=None) -> bool:
         """Freeze this client's trusted squad for its own authenticated group seat.
 
         Internal bridge seam only. The caller has already verified the server's
@@ -1252,8 +1267,16 @@ class NativeMatchmaking:
                 _fail(503, 'party_matchmaking_unavailable')
             if profile.get('user_id') != self._player:
                 _fail(403, 'native_user_mismatch')
-            if self._queue is not None:
-                _fail(409, 'matchmaking_already_queued')
+            if expected_generation is None:
+                if self._queue is not None:
+                    _fail(409, 'matchmaking_already_queued')
+            elif (self._queue is not expected_generation
+                    or not self._is_cloud_queue(self._queue)
+                    or self._queue.pvp is not None or self._announced
+                    or self._notification_uncertain):
+                # Discovery may finish after native Cancel or another Play.
+                # Its old generation may never replace or clear the new one.
+                return False
             squad, saved = self._trusted_battle_squad(profile)
             commander = next((row for row in self._native.get('commanders', [])
                               if row.get('key') == squad.commander_key), None)
@@ -1263,6 +1286,8 @@ class NativeMatchmaking:
                     'commander_id': str(commander['item_id']), 'item_ids': items}):
                 _fail(409, 'party_local_selection_changed')
             now = self._now()
+            if expected_generation is not None:
+                self._clear_queue()
             self._queue = _Queue(mode, ruleset, BATTLE_RULESET_MAPS[ruleset],
                 now, now + QUEUE_SECONDS, saved,
                 squad.commander_instance_id, squad.records, squad.commander_tier,
@@ -1270,6 +1295,7 @@ class NativeMatchmaking:
             self._announced = False
             self._notification_uncertain = False
             self._enrolled_users.clear()
+            return True
 
     def announce(self, profile: dict, *, expected_party_id: str | None = None) -> int:
         with self._lock:
@@ -1435,7 +1461,8 @@ class NativeMatchmaking:
     def abort_prepared_pvp_generation(self, generation, battle_id: str) -> bool:
         """Clear only the exact bound queue whose remote lease was released.
 
-        The coordinator separately proves that this battle never started.
+        The coordinator separately proves that the remote admission ended
+        (or that an unstarted party reservation was released).
         Exact object identity here also fences a queue replaced during its GET.
         This is an abort, not a native final or completion receipt.
         """
@@ -1571,14 +1598,24 @@ class NativeMatchmaking:
                      for row in self._native.get('units', [])
                      if (isinstance(row, dict) and row.get('build_state') == 'live'
                          and row.get('is_premium') is False
-                         and row.get('faction') in factions)]
+                         and row.get('faction') in factions
+                         and (policy['version'] not in (4, 5)
+                              or (type(row.get('tier')) is int
+                                  and row['tier'] == EFFECTIVE_UNIT_TIER)))]
         try:
+            if policy['version'] == 3:
+                cpu_commanders, cpu_units = select_cpu_asset_palette_v3(
+                    cpu_commanders, cpu_units, policy['seed'])
+            elif policy['version'] == 4:
+                cpu_commanders, cpu_units = select_cpu_asset_palette_v4(
+                    cpu_commanders, cpu_units, policy['seed'])
             rendered = build_battle_roster(
                 mode=queue.mode, ruleset=queue.ruleset, battle_id=battle_id,
                 humans=human_inputs, cpu_commander=cpu_commanders,
                 cpu_unit_pool=cpu_units, seed=policy['seed'],
                 map_key=queue.map_key, honor_explicit_teams=True,
-                allow_one_sided_pvp=queue.mode == 'pvp' and policy['version'] == 2)
+                allow_one_sided_pvp=queue.mode == 'pvp' and policy['version'] in (2, 3, 4, 5),
+                independent_cpu_commanders=policy['version'] == 5)
         except (BattleRosterError, KeyError, TypeError, ValueError):
             _fail(503, 'invalid_pvp_twenty_seat_roster')
         human_by_id = {seat.user_id: seat for seat in humans}
@@ -1641,7 +1678,7 @@ class NativeMatchmaking:
                                'seed': queue.mode + '-roster-v' + str(version) + ':' + assignment_id}
             integer_keys = ('version', 'totalSeats', 'seatsPerTeam', 'unitsPerSeat')
             if (not legacy and (not isinstance(roster_policy, dict)
-                    or version not in (1, 2)
+                    or version not in (1, 2, 3, 4, 5)
                     or set(roster_policy) != set(expected_policy)
                     or any(type(roster_policy.get(key)) is not int
                            for key in integer_keys)
@@ -1662,7 +1699,7 @@ class NativeMatchmaking:
                         or any(type(row[key]) is not int for key in ('seat', 'team', 'player_id'))
                         or row['team'] not in (0, 1)
                         or (queue.mode == 'pve' and row['team'] != 0)
-                        or (queue.mode == 'pvp' and version != 2 and row['team'] != index % 2)
+                        or (queue.mode == 'pvp' and version not in (2, 3, 4, 5) and row['team'] != index % 2)
                         or row['player_id'] != index + 1
                         or not isinstance(row['details'], dict)
                         or set(row['details']) != set(local_details)):
@@ -1686,7 +1723,7 @@ class NativeMatchmaking:
             if party_groups is not None:
                 if not isinstance(party_groups, list):
                     _fail(503, 'invalid_battle_party_groups')
-                if party_groups and version != 2:
+                if party_groups and version not in (2, 3, 4, 5):
                     _fail(503, 'invalid_battle_party_groups')
                 for group in party_groups:
                     if (not isinstance(group, list) or not 2 <= len(group) <= 4

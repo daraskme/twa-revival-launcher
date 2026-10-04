@@ -31,7 +31,7 @@ from .api_client import (
 )
 from .config import Config
 from .maintenance import MaintenanceStatus, status_from_error
-from .manifest import ManifestError, semver_tuple
+from .manifest import ManifestError, ManifestFile, semver_tuple
 from .trusted_keys import RELEASE_TRUSTED_KEYS
 from .updater import ArenaRunningError, UpdatePlan, UpdaterError
 from .updater import apply as updater_apply
@@ -59,6 +59,7 @@ class StartupCode(str, Enum):
     OFFLINE = "offline"
     INVALID_RESPONSE = "invalid_response"
     UNTRUSTED_UPDATE = "untrusted_update"
+    INCOMPATIBLE_GAME_NATIVE = "incompatible_game_native"
     UPDATE_FAILED = "update_failed"
 
 
@@ -80,6 +81,7 @@ _TEXT = {
         "offline": "Could not reach the update/maintenance service within the startup time limit.",
         "invalid_response": "The update/maintenance service returned an invalid health response.",
         "untrusted_update": "The release manifest could not be verified; startup was blocked.",
+        "incompatible_game_native": "The signed game update is incompatible with this launcher's verified native WAD/catalogue/NPL files. No game update was applied. Obtain a matching signed launcher/native/game release from the operator; do not bypass validation or copy the WAD after updating.",
         "update_failed": "The verified update could not be applied safely: {detail}",
         "ready": "Startup checks passed at client version {version}.",
         "endpoint": "set a non-loopback HTTPS TWA_API_BASE_URL",
@@ -109,6 +111,7 @@ _TEXT = {
         "offline": "起動時の制限時間内に更新・メンテナンスサービスへ接続できませんでした。",
         "invalid_response": "更新・メンテナンスサービスのヘルス応答が不正です。",
         "untrusted_update": "配布マニフェストの署名を検証できないため、起動を中止しました。",
+        "incompatible_game_native": "署名済みゲーム更新と、このランチャーの検証済みnative WAD・カタログ・NPLファイルが対応していません。ゲーム更新は適用していません。運営から対応する署名済みlauncher・native・gameの組を取得してください。検査の無効化や更新後のWAD上書きはしないでください。",
         "update_failed": "検証済み更新を安全に適用できませんでした: {detail}",
         "ready": "クライアント {version} の起動前チェックが完了しました。",
         "endpoint": "ループバック以外の HTTPS TWA_API_BASE_URL を設定してください",
@@ -138,6 +141,7 @@ _TEXT = {
         "offline": "Не удалось связаться с сервисом обновлений за отведённое время.",
         "invalid_response": "Сервис обновлений вернул некорректный ответ проверки состояния.",
         "untrusted_update": "Подпись манифеста не прошла проверку; запуск заблокирован.",
+        "incompatible_game_native": "Подписанное обновление игры несовместимо с проверенными native WAD/каталогом/NPL-файлами этого лаунчера. Обновление не применено. Получите у оператора согласованный подписанный комплект launcher/native/game; не отключайте проверки и не копируйте WAD после обновления.",
         "update_failed": "Не удалось безопасно применить проверенное обновление: {detail}",
         "ready": "Проверки запуска завершены для версии клиента {version}.",
         "endpoint": "задайте TWA_API_BASE_URL с HTTPS и без loopback-адреса",
@@ -339,6 +343,54 @@ def _strict_status_from_error(exc: MaintenanceError) -> MaintenanceStatus:
     return status
 
 
+class _IncompatibleNativeGame(UpdaterError):
+    """A signed game manifest cannot be paired with this native catalogue."""
+
+
+def _validate_public_native_game_files(
+    config: Config, files: tuple[ManifestFile, ...],
+) -> None:
+    """Bind the full game manifest to native trust and the software-renderer cache.
+
+    Do not use the current client WAD as authority: it may already be stale.
+    Nor can a changed-files-only plan prove that WAD/NPL/cache rows were present.
+    This check reads the guarded catalogue but never installs/migrates native data;
+    the later native installation/catalogue preflight remains mandatory. Runtime
+    overlay targets stay launcher-owned and therefore cannot appear in the signed
+    game manifest.
+    """
+    try:
+        from tools.player_native_payload import NPL, WAD_HASH
+        from tools.player_package import PackageError, _regular
+        from server.native_unit_abilities import load_native_unit_abilities
+        from .texture_memory_compat import TEXTURE_PACKS
+    except ImportError as exc:
+        raise _IncompatibleNativeGame("native compatibility validator unavailable") from exc
+    try:
+        catalogue = load_native_unit_abilities(
+            _regular(config.repo_root, "catalog/native_unit_abilities.json"))
+    except (OSError, ValueError, TypeError, PackageError) as exc:
+        raise _IncompatibleNativeGame("native catalogue cannot be verified") from exc
+    expected = catalogue["source"]["pack_sha256"]
+    wad_rows = tuple(row for row in files if row.path == "data/wad.pack")
+    if expected != WAD_HASH or len(wad_rows) != 1 or wad_rows[0].sha256 != expected:
+        raise _IncompatibleNativeGame("game/native WAD release mismatch")
+    # The signed game updater owns these client targets too. Reject stale
+    # NPL rows before it can undo a successful native payload migration.
+    for name, expected_npl in NPL.items():
+        npl_rows = tuple(row for row in files if row.path == name)
+        if len(npl_rows) != 1 or npl_rows[0].sha256 != expected_npl:
+            raise _IncompatibleNativeGame("game/native NPL release mismatch")
+    active_paths = {pack.active for pack in TEXTURE_PACKS}
+    if any(row.path in active_paths for row in files):
+        raise _IncompatibleNativeGame("game manifest must not own runtime texture overlays")
+    for pack in TEXTURE_PACKS:
+        cache_rows = tuple(row for row in files if row.path == pack.cache)
+        if (len(cache_rows) != 1 or cache_rows[0].sha256 != pack.sha256
+                or cache_rows[0].size != pack.size):
+            raise _IncompatibleNativeGame("game/WARP texture cache release mismatch")
+
+
 def check_startup(
     config: Config,
     policy: str,
@@ -425,7 +477,11 @@ def check_startup(
 
         _emit_progress(progress, locale, "checking_update")
         update_api = new_api(config.client_version, update=True) if public_native else api
-        plan = check_update(config, update_api, trusted_keys=accepted_keys)
+        compatibility = (
+            {"manifest_files_validator": lambda files: _validate_public_native_game_files(config, files)}
+            if public_native else {}
+        )
+        plan = check_update(config, update_api, trusted_keys=accepted_keys, **compatibility)
         _emit_progress(
             progress,
             locale,
@@ -532,6 +588,11 @@ def check_startup(
     except ManifestError:
         return StartupResult(
             StartupCode.UNTRUSTED_UPDATE, False, _text(locale, "untrusted_update")
+        )
+    except _IncompatibleNativeGame:
+        return StartupResult(
+            StartupCode.INCOMPATIBLE_GAME_NATIVE, False,
+            _text(locale, "incompatible_game_native"),
         )
     except ArenaRunningError as exc:
         return StartupResult(

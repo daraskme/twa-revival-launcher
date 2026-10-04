@@ -156,7 +156,7 @@ def _valid_public_cpu_fill_policy(value: object) -> bool:
     if not isinstance(value, dict):
         return False
     version = value.get('version')
-    if type(version) is not int or version not in (1, 2):
+    if type(version) is not int or version not in (1, 2, 3, 4, 5):
         return False
     expected = {
         "version": version, "totalSeats": 20, "seatsPerTeam": 10,
@@ -1279,30 +1279,29 @@ class NativeEconomyService:
             gate, timestamp,
         )
         current_matches = False
-        if gate["tutorial_acknowledged"] is True:
-            # The compact tutorial reply carries the current saved watermark.
-            # Some builds copy it into the following selection while others
-            # keep the pre-refresh value; both remain causally proven by
-            # the exact preceding tutorial request.
+        if (gate["tutorial_acknowledged"] is True
+                or gate["cleanup_acknowledged"] is True):
+            # A validated tutorial or exact old-unit cleanup reply carries the
+            # current saved watermark. The delayed selection may use that
+            # acknowledged value, or retain a previous selection-chain value.
+            # A current timestamp without either causal reply grants nothing.
             current_matches = timestamp == gate["current_wire_saved"]
         if (commander_key == gate["commander"]
                 and (previous_matches or current_matches)):
             return profile, gate
         return None
 
-    def _consume_external_profile_refresh_read(
+    def _external_profile_refresh_cached_read(
         self, raw: bytes,
     ) -> tuple[dict, dict] | None:
-        """Consume one cleanup-proven exact-current timestamp-only read.
+        """Answer a cleanup-proven cache read without spending UI authority.
 
-        The stock deferred-profile flag does not necessarily issue the
-        selection-shaped request handled above.  It can send a strict
-        ``timestamp``-only request after the old deployed unit's cleanup has
-        been acknowledged.  Admit only that nonzero, current watermark while
-        the durable ``equip_units`` receipt is still the latest profile state.
-        A zero read keeps its existing suppression contract, and ordinary
-        timestamp reads without this exact receipt/cleanup chain retain their
-        established behavior.
+        BCE500 serializes a separate cached cursor, not the selection request
+        created by the deferred refresh. Live observation proves its full
+        reply does not invoke BD8540 and cannot confirm hangar application.
+        Keep the bounded receipt gate for the later queue-idle selection.
+        Repeated cache reads are read-only and revalidate that same exact
+        current loadout and cleanup; they never acknowledge the refresh job.
         """
         gate = self._external_profile_refresh
         if gate is None:
@@ -1314,7 +1313,10 @@ class NativeEconomyService:
             return None
         try:
             body = _strict_json(raw)
-            if not isinstance(body, dict) or set(body) != {"request"}:
+            if (not isinstance(body, dict)
+                    or "request" not in body
+                    or not set(body) <= {"request", "headers"}
+                    or ("headers" in body and not isinstance(body["headers"], dict))):
                 return None
             request = body.get("request")
             if not isinstance(request, dict) or set(request) != {"timestamp"}:
@@ -1324,7 +1326,7 @@ class NativeEconomyService:
             )
         except EconomyError:
             return None
-        if timestamp == 0 or timestamp != gate["current_wire_saved"]:
+        if not 0 < timestamp <= gate["current_wire_saved"]:
             return None
         profile = self.adapter.build_profile()
         embedded = profile.get("profile") if isinstance(profile, dict) else None
@@ -1332,7 +1334,6 @@ class NativeEconomyService:
                 or embedded.get("saved") != gate["current_wire_saved"]):
             self._external_profile_refresh = None
             return None
-        self._external_profile_refresh = None
         return profile, gate
 
     def _external_refresh_previous_matches(
@@ -1908,24 +1909,12 @@ class NativeEconomyService:
                 # invalidates any gate retained by a reused service instance.
                 self._disarm_profile_graph_zero_followup()
             if shape == "read":
-                external_refresh = self._consume_external_profile_refresh_read(
-                    raw,
-                )
-                if external_refresh is not None:
-                    refresh_profile, refresh_gate = external_refresh
-                    response = self._wire_resync(refresh_profile)
-                    self._external_profile_refresh_ack = {
-                        "operation_id": refresh_gate["operation_id"],
-                        "saved": refresh_gate["current_saved"],
-                        "status": "external_refresh_resynced",
-                        "acknowledged_at": self._clock(),
-                        "http_response_written": False,
-                    }
-                    # Applying the graph may synchronously issue one duplicate
-                    # zero read.  Suppress only that causal follow-up; it must
-                    # never consume another external refresh authorization.
-                    self._arm_selection_zero_read()
-                    return response, "external_refresh_resynced"
+                cached = self._external_profile_refresh_cached_read(raw)
+                if cached is not None:
+                    refresh_profile, _refresh_gate = cached
+                    # This callback updates a cache, not the hangar graph.
+                    # Do not consume the gate or publish a server refresh ack.
+                    return self._wire_resync(refresh_profile), "external_refresh_cached"
             if shape == "selection":
                 external_refresh = (
                     self._consume_external_profile_refresh_selection(raw)
@@ -2371,6 +2360,12 @@ class NativeEconomyService:
                     "unit": next(iter(unit_keys)),
                     "previous": previous,
                     "selected": selected,
+                    "binding_pair": (
+                        tuple(row["db_key"] for _action, row in resolved)
+                        if len(resolved) == 2
+                        and all(action == "equip" for action, _row in resolved)
+                        else None
+                    ),
                     "preferred_parent": request_events[-1].get("parent_id"),
                     "retry": operation_id
                     in self.economy.snapshot()["operations"],
@@ -2463,16 +2458,24 @@ class NativeEconomyService:
                     if unit_ability_contract["retry"] is True:
                         raise EconomyError("invalid_event_response")
                     try:
-                        expected_events = self.adapter.unit_ability_delta_events(
-                            unit_ability_contract["before"],
-                            authoritative,
-                            unit_ability_contract["unit"],
-                            previous_db_key=unit_ability_contract["previous"],
-                            selected_db_key=unit_ability_contract["selected"],
-                            preferred_parent=unit_ability_contract[
-                                "preferred_parent"
-                            ],
-                        )
+                        if unit_ability_contract["binding_pair"] is not None:
+                            expected_events = self.adapter.unit_ability_pair_delta_events(
+                                unit_ability_contract["before"], authoritative,
+                                unit_ability_contract["unit"],
+                                binding_pair=unit_ability_contract["binding_pair"],
+                                preferred_parent=unit_ability_contract["preferred_parent"],
+                            )
+                        else:
+                            expected_events = self.adapter.unit_ability_delta_events(
+                                unit_ability_contract["before"],
+                                authoritative,
+                                unit_ability_contract["unit"],
+                                previous_db_key=unit_ability_contract["previous"],
+                                selected_db_key=unit_ability_contract["selected"],
+                                preferred_parent=unit_ability_contract[
+                                    "preferred_parent"
+                                ],
+                            )
                     except EconomyError:
                         raise EconomyError("invalid_event_response") from None
                     typed_events = (

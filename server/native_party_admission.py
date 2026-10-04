@@ -47,7 +47,7 @@ def validated_attempt(view, own_id):
             or attempt['phase'] not in ACTIVE | TERMINAL
             or attempt['mode'] not in ('pve', 'pvp')
             or attempt['ruleset'] not in ('territory', 'annihilation')
-            or type(attempt['rosterPolicyVersion']) is not int or attempt['rosterPolicyVersion'] != 2
+            or type(attempt['rosterPolicyVersion']) is not int or attempt['rosterPolicyVersion'] not in (2, 3, 4, 5)
             or any(type(attempt[key]) is not int or not 0 <= attempt[key] < 2**53
                    for key in ('ownLoadoutRevision', 'createdAt', 'expiresAt'))
             or attempt['expiresAt'] <= attempt['createdAt']):
@@ -286,6 +286,29 @@ class NativePartyAdmission:
                 return self._active_view(self._get(), mode, ruleset)
             return self._api.status()
 
+    def prepared_battle_terminal(self, prepared, generation):
+        terminal = getattr(self._api, 'prepared_battle_terminal', None)
+        if not callable(terminal):
+            return False
+        with self._lock:
+            if (self.stop.is_set()
+                    or self.matchmaking.pvp_queue_generation is not generation):
+                return False
+            local, known = self._local_attempt, self._attempt
+            if terminal(prepared, generation) is not True:
+                return False
+            if (self.stop.is_set()
+                    or self.matchmaking.pvp_queue_generation is not generation):
+                return False
+            if local is not None and known is not None:
+                if (local[0] != known['attemptId']
+                        or self._local_generation is not local[1]
+                        or known.get('assignmentId') != prepared.assignment_id
+                        or known.get('battleId') not in (None, prepared.battle_id)):
+                    return False
+                self._prepared_release = (generation, local[0], local[1])
+            return True
+
     def prepared_party_terminal(self, prepared, generation):
         """Read a terminal receipt for this exact party's prepared battle.
 
@@ -382,7 +405,7 @@ class NativePartyAdmission:
         with self._lock:
             if self._attempt is None or self._attempt['phase'] not in ACTIVE:
                 return
-            if policy is None or policy['version'] != 2:
+            if policy is None or policy['version'] not in (2, 3):
                 raise PvpCoordinatorError('party_roster_policy_required')
             members = self._attempt['memberIds']
             admitted = [row for row in rows if row['userId'] in members]

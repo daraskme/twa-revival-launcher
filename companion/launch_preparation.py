@@ -7,6 +7,7 @@ DLL, or changes profile economy.  The caller owns the canonical client lock.
 from __future__ import annotations
 
 import hashlib
+from decimal import Decimal, InvalidOperation
 import os
 import re
 import stat
@@ -27,8 +28,8 @@ from .updater import (
 
 
 _NPL_STUB_SHA256 = {
-    "npl-base.dll": "57e21f4bb30309799ff00ce386b82ec2f5fbf6507f381803f5ae56877c5335f8",
-    "npl-sdk.dll": "e27de46954077a979f4b56568fa13a2f49cd5061026c5868f6262fb68aba3e45",
+    "npl-base.dll": "9ab3d54d9d5f28d1ad1802a621d8e68f6f9f37f10808f8b3586d5949f32c424d",
+    "npl-sdk.dll": "65122308d752e5a39e749737900222e5f5518b48a4a2381f10c1eff2dcc66591",
 }
 _REGISTRY_PATH = r"Software\The Creative Assembly\Arena"
 _REGISTRY_NAME = "machine_fingerprint"
@@ -52,6 +53,50 @@ _PREFERENCE_KEYS = {
     "show_frontend_movies": "bool", "ONLINE_PLATFORM": "string",
     "fake_auth_token": "string", "display_name_override": "string",
     "startup_frontend_scene": "string",
+    "gfx_aa": "int", "gfx_texture_quality": "int", "gfx_sky_quality": "int",
+    "gfx_unit_quality": "int", "gfx_building_quality": "int", "gfx_shadow_quality": "int",
+    "gfx_tree_quality": "int", "gfx_grass_quality": "int", "gfx_terrain_quality": "int",
+    "gfx_water_quality": "int", "gfx_effects_quality": "int", "gfx_vsync": "bool",
+    "gfx_ssao": "bool", "gfx_distortion": "bool", "gfx_gpu": "string",
+}
+# Only values exposed by the native graphics menu may survive a game-side
+# preferences write.  Window placement, platform, identity and auth settings
+# remain owned by the launch transaction.
+_PERSISTENT_GRAPHICS_KEYS = {
+    "gfx_aa": "int", "gfx_texture_quality": "int",
+    "gfx_texture_filtering": "int", "gfx_sky_quality": "int",
+    "gfx_unit_quality": "int", "gfx_building_quality": "int",
+    "gfx_shadow_quality": "int", "gfx_tree_quality": "int",
+    "gfx_grass_quality": "int", "gfx_terrain_quality": "int",
+    "gfx_water_quality": "int", "gfx_effects_quality": "int",
+    "gfx_depth_of_field": "int", "gfx_hdr": "int",
+    "gfx_alpha_blend": "int", "gfx_auto_resolution_scale_target_fps": "fps",
+    "gfx_gamma_setting": "float", "gfx_brightness_setting": "float",
+    "gfx_fixed_resolution_scale": "scale",
+    "gfx_vsync": "bool", "gfx_ssao": "bool",
+    "gfx_distortion": "bool", "gfx_ssr": "bool",
+    "gfx_tesselation": "bool", "gfx_vignette": "bool",
+    "gfx_blood_effects": "bool", "gfx_auto_resolution_scale": "bool",
+    "gfx_automatic_assets_downgrade": "bool",
+    # Native Apply also records the detected adapter and first-run state.
+    "gfx_gpu": "gpu", "gfx_first_run": "bool",
+}
+_LAUNCH_ONLY_PREFERENCE_KEYS = (
+    "ONLINE_PLATFORM", "fake_auth_token", "display_name_override",
+    "startup_frontend_scene", "FRONTEND_SCENE_ENABLED",
+    "PERMANENTLY_SKIP_TUTORIAL", "show_frontend_movies",
+    "write_preferences_at_exit", "fix_res", "fix_window_pos",
+    "gfx_show_pre_launch_window",
+)
+# preferences.template.txt belongs to the immutable core of older installers.
+# Keep fallback graphics in signed, updateable code so upgrades and new ZIPs
+# agree without replacing a valid user's chosen settings.
+_FALLBACK_GRAPHICS = {
+    "gfx_aa": 0, "gfx_texture_quality": 1, "gfx_sky_quality": 1,
+    "gfx_unit_quality": 1, "gfx_building_quality": 1, "gfx_shadow_quality": 0,
+    "gfx_tree_quality": 1, "gfx_grass_quality": 1, "gfx_terrain_quality": 1,
+    "gfx_water_quality": 1, "gfx_effects_quality": 1, "gfx_vsync": True,
+    "gfx_ssao": False, "gfx_distortion": False, "gfx_gpu": '""',
 }
 
 
@@ -422,15 +467,15 @@ def _set_preference(text: str, key: str, value: object) -> str:
     kind = _PREFERENCE_KEYS[key]
     if kind == "bool":
         rendered = "true" if value is True else "false"
-        pattern = re.compile(rf"^{re.escape(key)}\s+\w+;(.*)$", re.M)
+        pattern = re.compile(rf"^[ \t]*{re.escape(key)}[ \t]+\w+;(.*)$", re.M)
     elif kind == "int":
         rendered = str(int(value))
-        pattern = re.compile(rf"^{re.escape(key)}\s+-?\d+;(.*)$", re.M)
+        pattern = re.compile(rf"^[ \t]*{re.escape(key)}[ \t]+-?\d+;(.*)$", re.M)
     else:
         rendered = str(value)
         if any(char in rendered for char in ("\r", "\n", ";", "\0")):
             raise LaunchPreparationError(f"unsafe preference value for {key}")
-        pattern = re.compile(rf"^{re.escape(key)}\s+.+$", re.M)
+        pattern = re.compile(rf"^[ \t]*{re.escape(key)}[ \t]+.+$", re.M)
     replacement = f"{key} {rendered};"
     return pattern.sub(lambda _match: replacement, text, count=1) if pattern.search(text) \
         else replacement + "\n" + text
@@ -440,10 +485,10 @@ def _preferences_corrupt(text: str) -> bool:
     if "\ufeff" in text:
         return True
     counts: dict[str, int] = {}
-    for line in text.splitlines():
-        key = line.split(" ", 1)[0].rstrip(";")
-        if key:
-            counts[key] = counts.get(key, 0) + 1
+    # Stock files repeat each setting name in its trailing documentation and
+    # may contain several comment-only lines. Count assignments, not comments.
+    for key in re.findall(r"^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+[^;\r\n]+;", text, re.M):
+        counts[key] = counts.get(key, 0) + 1
     return any(count > 1 for count in counts.values())
 
 
@@ -459,8 +504,11 @@ def _build_preferences(current: bytes | None, template: str,
         from .player_name import validate_display_name
         validate_display_name(display_name)
     text = _read_pref_text(current) if current is not None else ""
-    if not text.strip() or _preferences_corrupt(text) or text.count("x_res") != 1:
+    if (not text.strip() or _preferences_corrupt(text)
+            or len(re.findall(r"^[ \t]*x_res[ \t]+\d+;", text, re.M)) != 1):
         text = template
+        for key, value in _FALLBACK_GRAPHICS.items():
+            text = _set_preference(text, key, value)
     values: tuple[tuple[str, object], ...] = (
         ("x_res", min(monitor["w"], 1600)),
         ("y_res", min(monitor["h"], 900)),
@@ -477,6 +525,114 @@ def _build_preferences(current: bytes | None, template: str,
     for key, value in values:
         text = _set_preference(text, key, value)
     return b"\xff\xfe" + text.replace("\r\n", "\n").encode("utf-16-le")
+
+
+def _decode_owned_preferences(raw: bytes) -> tuple[str, str]:
+    if len(raw) > 256 * 1024:
+        raise LaunchPreparationError("owned preferences exceed the merge limit")
+    try:
+        if raw.startswith(b"\xff\xfe"):
+            return raw[2:].decode("utf-16-le"), "utf-16-le"
+        if raw.startswith(b"\xfe\xff"):
+            return raw[2:].decode("utf-16-be"), "utf-16-be"
+        return raw.decode("utf-8-sig"), "utf-8"
+    except UnicodeError:
+        raise LaunchPreparationError("owned preferences have invalid encoding") from None
+
+
+def _graphics_assignment(text: str, key: str):
+    pattern = re.compile(
+        rf"(?m)^([ \t]*{re.escape(key)}[ \t]+)([^;\r\n]+)(;[^\r\n]*)(\r?\n|$)")
+    matches = list(pattern.finditer(text))
+    if len(matches) > 1:
+        raise LaunchPreparationError("owned preferences contain duplicate graphics settings")
+    return matches[0] if matches else None
+
+
+def _preference_assignments(text: str) -> dict[str, str]:
+    """Parse values independently of native writer ordering and documentation."""
+    values: dict[str, str] = {}
+    for line in text.splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        match = re.fullmatch(
+            r"[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+([^;\r\n\0]+);[ \t]*(?:#.*)?", line)
+        if match is None or match[1] in values:
+            raise LaunchPreparationError("owned preferences contain invalid assignments")
+        values[match[1]] = match[2].strip()
+    return values
+
+
+def _valid_graphics_value(key: str, value: str) -> bool:
+    kind = _PERSISTENT_GRAPHICS_KEYS[key]
+    if kind == "gpu":
+        return len(value) <= 258 and re.fullmatch(r'"[^";\r\n\0]*"', value) is not None
+    if kind == "bool":
+        return value in ("true", "false")
+    if kind in ("int", "fps"):
+        if re.fullmatch(r"[0-9]{1,3}", value) is None:
+            return False
+        number = int(value)
+        return 10 <= number <= 240 if kind == "fps" else 0 <= number <= 16
+    if re.fullmatch(r"(?:[0-9]{1,2})(?:\.[0-9]{1,6})?", value) is None:
+        return False
+    try:
+        number = Decimal(value)
+    except InvalidOperation:
+        return False
+    return (Decimal("0.25") <= number <= Decimal("2") if kind == "scale"
+            else Decimal("0.1") <= number <= Decimal("5"))
+
+
+def _merge_verified_graphics(before: bytes | None, after: bytes,
+                             current: bytes) -> bytes:
+    expected, expected_encoding = _decode_owned_preferences(after)
+    observed, observed_encoding = _decode_owned_preferences(current)
+    if before is None:
+        # First launch: retain verified menu choices using the generated
+        # preferences, but strip every launch-only binding before persisting.
+        baseline, baseline_encoding = expected, expected_encoding
+        for key in _LAUNCH_ONLY_PREFERENCE_KEYS:
+            pattern = re.compile(rf"(?m)^[ \t]*{re.escape(key)}[ \t]+[^\r\n]*\r?\n?")
+            baseline = pattern.sub("", baseline)
+    else:
+        baseline, baseline_encoding = _decode_owned_preferences(before)
+    if (expected_encoding != "utf-16-le" or observed_encoding != expected_encoding
+            or _preferences_corrupt(baseline) or _preferences_corrupt(observed)
+            or len(re.findall(r"^[ \t]*x_res[ \t]+\d+;", baseline, re.M)) != 1):
+        raise LaunchPreparationError("owned preferences cannot be safely merged")
+    original_values = _preference_assignments(expected)
+    observed_values = _preference_assignments(observed)
+    _preference_assignments(baseline)
+    # Apply writes the native settings table from scratch: CRLF, stock comments,
+    # its own ordering, and no launcher-only platform/authentication entries.
+    # Compare the full assignment map, then retain only verified menu values.
+    if (observed_values.keys() - original_values.keys()
+            or original_values.keys() - observed_values.keys()
+               - set(_LAUNCH_ONLY_PREFERENCE_KEYS)):
+        raise LaunchPreparationError("owned preferences changed outside graphics values")
+    merged = baseline
+    for key, value in observed_values.items():
+        if value == original_values[key]:
+            continue
+        if key not in _PERSISTENT_GRAPHICS_KEYS or not _valid_graphics_value(key, value):
+            raise LaunchPreparationError("owned preferences contain an invalid graphics value")
+        durable = _graphics_assignment(merged, key)
+        if durable is None:
+            merged = f"{key} {value};\n" + merged
+        else:
+            merged = merged[:durable.start(2)] + value + merged[durable.end(2):]
+    if baseline_encoding == "utf-16-le":
+        result = b"\xff\xfe" + merged.encode("utf-16-le")
+    elif baseline_encoding == "utf-16-be":
+        result = b"\xfe\xff" + merged.encode("utf-16-be")
+    else:
+        result = merged.encode("utf-8")
+    # The current launch's bearer token must not survive a graphics update.
+    token = re.search(r"(?m)^[ \t]*fake_auth_token[ \t]+([^;\r\n]+);", expected)
+    if token is None or token.group(1) in merged:
+        raise LaunchPreparationError("owned preferences retain the launch token")
+    return result
 
 
 def sanitized_launch_environment(source: Mapping[str, str]) -> dict[str, str]:
@@ -591,6 +747,24 @@ class _OwnedFile:
         else:
             _atomic_replace(
                 self.path, self.before, self.after, self.parent_guard)
+        self.restored = True
+
+
+class _OwnedPreferences(_OwnedFile):
+    def restore(self) -> None:
+        if self.restored or self.commit_state == "not_applied":
+            super().restore()
+            return
+        _validate_parent_guard(self.path, self.parent_guard, "owned preferences")
+        _require_unshared_regular_or_missing(self.path, "owned preferences")
+        if not _lexists(self.path):
+            raise LaunchPreparationError("owned preferences disappeared during launch")
+        current = self.path.read_bytes()
+        if current == self.after:
+            super().restore()
+            return
+        merged = _merge_verified_graphics(self.before, self.after, current)
+        _atomic_replace(self.path, merged, current, self.parent_guard)
         self.restored = True
 
 
@@ -726,8 +900,8 @@ def prepare_authenticated_client(
         for owned in (
             _snapshot_owned_file(_safe_client_target(config, "stack_config.json"), stack_bytes),
             _snapshot_owned_file(user_script_path, user_script_bytes),
-            _OwnedFile(path=preference_path, before=current_preferences,
-                       after=preference_bytes, parent_guard=preference_guard),
+            _OwnedPreferences(path=preference_path, before=current_preferences,
+                              after=preference_bytes, parent_guard=preference_guard),
         ):
             prepared._files.append(owned)
             owned.apply()

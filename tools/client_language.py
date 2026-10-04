@@ -27,6 +27,17 @@ SUPPORTED_LANGUAGES = ("EN", "JA", "RU")
 _ALIASES = {language.lower(): language for language in SUPPORTED_LANGUAGES}
 _LANGUAGE_FILES = ("language.txt", os.path.join("data", "language.txt"))
 _LANGUAGE_OVERLAY = os.path.join("data", "zz_twa_active_locale.pack")
+_GRAPHICS_OPTIONS_LOC = "text/db/ui_options.loc"
+_UNLIMITED_MEMORY_KEY = "ui_options_localised_label_checkbox_unlimited_memorygraphics"
+_UNLIMITED_MEMORY_LABELS = {
+    "EN": "Unlimited video memory",
+    "JA": "ビデオメモリの制限を解除",
+    "RU": "Неограниченная видеопамять",
+}
+_RECONNECT_UI_LOC = "text/db/uied_component_texts.loc"
+_LEAVE_BATTLE_ACTIVE_KEY = "uied_component_texts_localised_string_button_quit_active_Text_630012"
+_LEAVE_BATTLE_INACTIVE_KEY = "uied_component_texts_localised_string_button_quit_inactive_Text_630012"
+_RECONNECT_RETURN_KEY = "uied_component_texts_localised_string_button_return_to_frontend_active_Text_0"
 
 
 class ClientLanguageError(RuntimeError):
@@ -108,7 +119,127 @@ def _read_selector(path: Path) -> str | None:
     return normalize_language(text)
 
 
+def _correct_graphics_memory_caption(value: bytes, language: str) -> bytes:
+    """Correct the inverted stock caption, retaining all other LOC bytes.
+
+    The native checkbox enables unlimited memory: checked saves
+    gfx_automatic_assets_downgrade=false. The stock caption says the opposite.
+    Only the exact label row in ui_options.loc is changed, never its binding.
+    """
+    base = 2 if value.startswith(b'\xff\xfe') else 0
+    if value[base:base + 4] != b'LOC\0':
+        raise ValueError('invalid graphics options text')
+    count = struct.unpack_from('<I', value, base + 8)[0]
+    offset = base + 12
+    target = _UNLIMITED_MEMORY_KEY.encode('utf-16-le')
+    replacement = None
+    for _ in range(count):
+        key_size = 2 * struct.unpack_from('<H', value, offset)[0]
+        offset += 2
+        key = value[offset:offset + key_size]
+        offset += key_size
+        value_start = offset
+        text_size = 2 * struct.unpack_from('<H', value, offset)[0]
+        offset += 2 + text_size
+        if offset >= len(value):
+            raise ValueError('truncated graphics options row')
+        if key == target:
+            if replacement is not None:
+                raise ValueError('duplicate graphics memory caption')
+            replacement = (value_start, offset)
+        offset += 1  # Preserve the existing tooltip flag.
+    if replacement is None:
+        return value
+    start, end = replacement
+    caption = _UNLIMITED_MEMORY_LABELS[language].encode('utf-16-le')
+    return value[:start] + struct.pack('<H', len(caption) // 2) + caption + value[end:]
+
+
+def _copy_leave_battle_caption(value: bytes, target_key: str) -> bytes:
+    """Fill one exact missing/empty LOC row from the verified stock translation."""
+    base = 2 if value.startswith(b'\xff\xfe') else 0
+    if len(value) < base + 12 or value[base:base + 4] != b'LOC\0':
+        raise ValueError('invalid reconnect UI text')
+    if struct.unpack_from('<I', value, base + 4)[0] != 1:
+        raise ValueError('unsupported reconnect UI text version')
+    count = struct.unpack_from('<I', value, base + 8)[0]
+    offset = base + 12
+    active_key = _LEAVE_BATTLE_ACTIVE_KEY.encode('utf-16-le')
+    target_key_bytes = target_key.encode('utf-16-le')
+    active_caption = None
+    target_span = None
+    for _ in range(count):
+        if offset + 2 > len(value):
+            raise ValueError('truncated reconnect UI key length')
+        key_size = 2 * struct.unpack_from('<H', value, offset)[0]
+        offset += 2
+        if offset + key_size + 2 > len(value):
+            raise ValueError('truncated reconnect UI key')
+        key = value[offset:offset + key_size]
+        offset += key_size
+        text_size = 2 * struct.unpack_from('<H', value, offset)[0]
+        caption_span = (offset, offset + 2 + text_size)
+        offset += 2
+        if offset + text_size + 1 > len(value):
+            raise ValueError('truncated reconnect UI caption')
+        caption = value[offset:offset + text_size]
+        offset += text_size
+        offset += 1
+        if key == active_key:
+            if active_caption is not None or not caption:
+                raise ValueError('invalid active leave battle caption')
+            caption.decode('utf-16-le')
+            active_caption = caption
+        elif key == target_key_bytes:
+            if target_span is not None:
+                raise ValueError('duplicate target leave battle caption')
+            target_span = (caption_span, caption)
+    if offset != len(value):
+        raise ValueError('invalid reconnect UI trailing bytes')
+    if active_caption is None:
+        raise ValueError('missing active leave battle caption')
+    if target_span is not None:
+        (start, end), caption = target_span
+        if caption:
+            return value
+        return (value[:start] + struct.pack('<H', len(active_caption) // 2)
+                + active_caption + value[end:])
+    if count == 0xffffffff:
+        raise ValueError('reconnect UI row count overflow')
+    if len(target_key_bytes) // 2 > 0xffff or len(active_caption) // 2 > 0xffff:
+        raise ValueError('reconnect UI caption too long')
+    row = (struct.pack('<H', len(target_key_bytes) // 2) + target_key_bytes
+           + struct.pack('<H', len(active_caption) // 2) + active_caption + b'\x01')
+    return (value[:base + 8] + struct.pack('<I', count + 1)
+            + value[base + 12:] + row)
+
+
+def _add_leave_battle_inactive_caption(value: bytes) -> bytes:
+    """Retain the exact 0.2.35/0.2.36 quit-menu inactive-caption correction."""
+    return _copy_leave_battle_caption(value, _LEAVE_BATTLE_INACTIVE_KEY)
+
+
+def _add_reconnect_return_caption(value: bytes) -> bytes:
+    """Resolve the real reconnection dialog key shared by all five states.
+
+    Version119 reconnection_dialogue_box binds button_return_to_frontend to
+    active_Text_0 in active/down/down_off/hover/inactive. The quit-menu 630012
+    key does not occur in that dialog. Keep the UIC and its behavior unchanged.
+    """
+    return _copy_leave_battle_caption(value, _RECONNECT_RETURN_KEY)
+
+
 def build_active_language_overlay(client: Path, language: str) -> bytes:
+    return _build_active_language_overlay(
+        client, language, correct_graphics_caption=True,
+        correct_reconnect_caption=True,
+        correct_reconnect_return_caption=True)
+
+
+def _build_active_language_overlay(client: Path, language: str, *,
+                                   correct_graphics_caption: bool,
+                                   correct_reconnect_caption: bool,
+                                   correct_reconnect_return_caption: bool = False) -> bytes:
     """Prioritize translated text without duplicating font or audio resources.
 
     Arena's VFS reads language.txt from mounted archives. All installed locale
@@ -144,6 +275,12 @@ def build_active_language_overlay(client: Path, language: str) -> bytes:
                         raise ValueError('locale metadata mismatch')
                 elif not value.startswith((b'\xff\xfeLOC\0', b'LOC\0')):
                     raise ValueError('invalid locale text header')
+                if name == _GRAPHICS_OPTIONS_LOC and correct_graphics_caption:
+                    value = _correct_graphics_memory_caption(value, canonical)
+                if name == _RECONNECT_UI_LOC and correct_reconnect_caption:
+                    value = _add_leave_battle_inactive_caption(value)
+                if name == _RECONNECT_UI_LOC and correct_reconnect_return_caption:
+                    value = _add_reconnect_return_caption(value)
                 selected.append((entry.path, value))
         if 'language.txt' not in seen or len(selected) < 2:
             raise ValueError('locale text or selector missing')
@@ -174,7 +311,20 @@ def _verified_overlay_language(client: Path, overlay: bytes) -> str:
             raise ValueError('invalid overlay language metadata')
         language = normalize_language(extract_file(overlay, entries[0]).decode('ascii'))
         if overlay != build_active_language_overlay(client, language):
-            raise ValueError('overlay differs from the verified translation pack')
+            # A signed launcher update may encounter the exact old overlay.
+            # Rebuild that historical form from the same verified pack; never
+            # accept an arbitrary overlay based only on its language selector.
+            current_0236 = _build_active_language_overlay(
+                client, language, correct_graphics_caption=True,
+                correct_reconnect_caption=True)
+            previous = _build_active_language_overlay(
+                client, language, correct_graphics_caption=True,
+                correct_reconnect_caption=False)
+            legacy = _build_active_language_overlay(
+                client, language, correct_graphics_caption=False,
+                correct_reconnect_caption=False)
+            if overlay not in (current_0236, previous, legacy):
+                raise ValueError('overlay differs from the verified translation pack')
         return language
     except (ClientLanguageError, OSError, ValueError, RuntimeError, IndexError, struct.error) as exc:
         raise ClientLanguageError('existing active locale overlay is unrecognized') from exc

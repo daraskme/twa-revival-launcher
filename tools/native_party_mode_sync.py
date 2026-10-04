@@ -17,8 +17,8 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from tools.player_native_payload import GAME_HASH as GAME_SHA256
 
-GAME_SHA256 = 'b5d1547b720fd03f1e55e76e2d41b531d2d72e0b4a6270c73223018b8cd45e06'
 
 SOURCE = r'''
 (() => {
@@ -63,15 +63,18 @@ SOURCE = r'''
 
   function completedEnum(session, wanted) {
     const manager = session.add(0x274).readPointer();
-    if (manager.isNull() || manager.add(0x27c).readU32() !== 4) return null;
+    if (manager.isNull()) return null;
+    const count = manager.add(0x27c).readU32();
+    if (count !== 2 && count !== 4) return null;
     const rows = manager.add(0x280).readPointer();
     if (rows.isNull()) return null;
     const names = new Set(), enums = new Set();
     let result = null;
-    for (let index = 0; index < 4; index++) {
+    for (let index = 0; index < count; index++) {
       const row = rows.add(index * 0x38), name = wire(row), value = row.add(0xc).readU32();
       if (name === null || names.has(name) || value < 1 || value > 4 || enums.has(value))
         return null;
+      if (count === 2 && !['territory_pvp', 'annihilation_pvp'].includes(name)) return null;
       names.add(name); enums.add(value);
       if (name === wanted) result = value;
     }

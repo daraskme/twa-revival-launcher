@@ -188,7 +188,9 @@ class PrivateResultAuthority:
     def _worker_view(self, value: object, frozen_source: dict, battle: dict,
                      payload: dict | None, *, settlement_required: bool,
                      returnable_required: bool = True) -> str:
-        if not isinstance(value, dict) or set(value) != {"battle", "settlement"}:
+        if (not isinstance(value, dict) or not {"battle", "settlement"} <= set(value)
+                or set(value) - {"battle", "settlement", "admissionReleased"}
+                or ('admissionReleased' in value and type(value['admissionReleased']) is not bool)):
             raise PrivateResultError("invalid_private_worker_battle")
         worker_battle = value.get("battle")
         try:
@@ -209,12 +211,13 @@ class PrivateResultAuthority:
         status = worker_battle.get("status")
         expires_at = worker_battle.get("expiresAt")
         deadline = type(expires_at) is int and self.clock_seconds() >= expires_at
+        released = value.get('admissionReleased') is True and status != 'disputed'
         if returnable_required and status != "settled" and status != "expired" and not (
-                status == "disputed" and deadline):
+                status == "disputed" and deadline) and not released:
             raise PrivateResultError("private_worker_battle_not_returnable")
         receipt = value.get("settlement")
         if receipt is None:
-            if settlement_required or not (status == "expired" or deadline):
+            if settlement_required or not (status == "expired" or deadline or released):
                 raise PrivateResultError("private_worker_settlement_missing")
         else:
             if payload is None:

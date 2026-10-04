@@ -6,11 +6,12 @@ live filesystem. A newly staged client owns real ``client/data`` and
 and the explicitly allowed terrain packs. Every existing component on that target path must
 be a normal file/directory, never a symlink or Windows junction.
 
-Downloads are hash/size verified in the companion state directory. Existing
-targets are backed up atomically, replacements use a same-directory temporary
-file plus ``os.replace()``, and any later failure rolls back already replaced
-files. Both the client and companion state trees must be disjoint from the
-read-only original tree. Arena.exe must be closed for every non-empty plan.
+Downloads are hash/size verified in a per-install work directory under the
+client, keeping scratch and backups on the target volume. Existing targets are
+backed up atomically, replacements use a same-directory temporary file plus
+``os.replace()``, and any later failure rolls back already replaced files.
+Both the client and companion state trees must be disjoint from the read-only
+original tree. Arena.exe must be closed for every non-empty plan.
 """
 from __future__ import annotations
 
@@ -31,10 +32,14 @@ from typing import Callable
 
 from .api_client import ApiClient
 from .client_lock import ClientOperationLockError, client_operation_lock
-from .config import CLIENT_UPDATE_STATE_FILENAME, Config, save_update_state
+from .config import (
+    CLIENT_UPDATE_STATE_FILENAME, CLIENT_UPDATE_WORK_DIRNAME, Config,
+    save_update_state,
+)
 from .manifest import (
     Manifest,
     ManifestError,
+    ManifestFile,
     parse_manifest,
     semver_tuple,
     validate_relative_path,
@@ -180,13 +185,22 @@ def _require_safe_update_boundaries(config: Config) -> None:
     raw_original, resolved_original = _resolve_boundary_directory(
         config.original_dir, "original directory", allow_missing=False
     )
+    client_boundary = _resolve_boundary_directory(
+        config.client_dir, "client directory", allow_missing=False
+    )
+    raw_client, _resolved_client = client_boundary
+    raw_work, resolved_work = _resolve_boundary_directory(
+        config.update_work_dir, "client update work directory", allow_missing=True
+    )
+    expected_work = raw_client / CLIENT_UPDATE_WORK_DIRNAME
+    if ntpath.normcase(os.fspath(raw_work)) != ntpath.normcase(os.fspath(expected_work)):
+        raise UpdaterError("client update work directory must be the reserved child of the client")
     destinations = (
-        (*_resolve_boundary_directory(
-            config.client_dir, "client directory", allow_missing=False
-        ), "client directory"),
+        (*client_boundary, "client directory"),
         (*_resolve_boundary_directory(
             config.state_dir, "companion state directory", allow_missing=True
         ), "companion state directory"),
+        (raw_work, resolved_work, "client update work directory"),
     )
     for raw_destination, resolved_destination, label in destinations:
         raw_overlap = _is_same_or_beneath(
@@ -219,29 +233,36 @@ def _safe_client_target(config: Config, relative_path: str) -> Path:
 
 
 def _safe_state_target(root: Path, version: str, relative_path: str) -> Path:
-    """Create state subdirectories one at a time while refusing reparse points."""
+    """Create per-install work subdirectories without following reparse points."""
     semver_tuple(version)
     relative_path = validate_relative_path(relative_path)
     root = Path(os.path.abspath(root))
     if not _lexists(root):
-        root.mkdir(parents=True)
-    _require_real_directory(root, "companion update state directory")
+        _require_real_directory(root.parent, "client update work directory")
+        root.mkdir()
+    _require_real_directory(root, "client update work subdirectory")
     current = root
     for segment in (version, *relative_path.split("/")[:-1]):
         current = current / segment
         if not _lexists(current):
             current.mkdir()
-        _require_real_directory(current, "companion update state path")
+        _require_real_directory(current, "client update work path")
     target = current / relative_path.split("/")[-1]
-    _require_regular_or_missing(target, "companion update state file")
+    _require_regular_or_missing(target, "client update work file")
     return target
 
 
-def _prepare_state_root(config: Config) -> None:
-    root = Path(os.path.abspath(config.state_dir))
+def _prepare_update_work_root(config: Config) -> None:
+    """Prepare update scratch space without moving private auth state."""
+    _require_safe_update_boundaries(config)
+    client = Path(os.path.abspath(config.client_dir))
+    _require_real_directory(client, "client directory")
+    root = Path(os.path.abspath(config.update_work_dir))
+    if root.parent != client:
+        raise UpdaterError("client update work directory escaped the install root")
     if not _lexists(root):
-        root.mkdir(parents=True)
-    _require_real_directory(root, "companion state directory")
+        root.mkdir()
+    _require_real_directory(root, "client update work directory")
 
 
 def _safe_common_update_state_path(config: Config) -> Path:
@@ -477,8 +498,16 @@ def fetch_manifest(config: Config, api: ApiClient, trusted_keys: dict[str, str] 
     return manifest
 
 
-def check(config: Config, api: ApiClient, trusted_keys: dict[str, str] | None = None) -> UpdatePlan:
-    """Fetch+verify the manifest and diff it against client_dir. Never writes."""
+def check(
+    config: Config, api: ApiClient, trusted_keys: dict[str, str] | None = None,
+    *, manifest_files_validator: Callable[[tuple[ManifestFile, ...]], None] | None = None,
+) -> UpdatePlan:
+    """Verify, optionally validate all immutable manifest rows, then diff. Never writes.
+
+    The validator runs after signature/path/origin/channel/floor checks, before
+    discarding unchanged rows. It receives neither mutable raw JSON nor a
+    changed-files-only plan, and must raise on an incompatible release pair.
+    """
     _require_safe_update_boundaries(config)
     current_version, current_v = _effective_current_version(config)
     manifest = fetch_manifest(config, api, trusted_keys)
@@ -488,6 +517,8 @@ def check(config: Config, api: ApiClient, trusted_keys: dict[str, str] | None = 
             f"manifest version {manifest.version} is older than installed {current_version}; "
             "refusing a signed downgrade"
         )
+    if manifest_files_validator is not None:
+        manifest_files_validator(manifest.files)
     files: list[UpdatePlanFile] = []
     for entry in manifest.files:
         target = _safe_client_target(config, entry.path)
@@ -722,9 +753,9 @@ def apply(
     if is_arena_running(process_lister):
         raise ArenaRunningError("Arena.exe is running; close it before applying an update")
 
-    _prepare_state_root(config)
+    _prepare_update_work_root(config)
 
-    # Download into the private state directory. ApiClient verifies while
+    # Download into the install-local work directory. ApiClient verifies while
     # streaming; the checks here defend the hand-off and reject stale links.
     staged: dict[str, Path] = {}
     for plan_file in plan.files:

@@ -18,6 +18,10 @@ import re
 import time
 from typing import Callable
 from xml.sax.saxutils import escape
+if __package__:
+    from .native_social import chat_room_jid
+else:
+    from native_social import chat_room_jid
 
 NAMESPACE = 'http://arenatw.co.uk/xmpp'
 NATIVE_ID = re.compile(r'[A-Za-z0-9_-]{1,36}\Z')
@@ -341,13 +345,14 @@ def create_response(party, account_id, native_id_for, *, policy: PartyDisplayPol
                     details_for=None):
     """Raw /create_party payload: linked parser RVA 0xBF6500.
 
-    The existing HTTP seam supplies its CA response envelope. A chat room JID
-    is omitted because this module does not implement a party chat service.
+    The existing HTTP seam supplies its CA response envelope. The stock
+    chat_room_jid field joins the authenticated bridge's party MUC service.
     """
     own = next((row for row in party['members'] if row['id'] == account_id), None)
     if own is None:
         raise PartyError('party_membership_mismatch', 403)
-    return {'party_id': _identifier(party['id']), 'min_tier': policy.min_tier,
+    return {'party_id': _identifier(party['id']), 'chat_room_jid': chat_room_jid('party', party['id']),
+            'min_tier': policy.min_tier,
             'max_tier': policy.max_tier, 'max_party_range': policy.max_party_range,
             'max_party_size': policy.max_party_size,
             'party_user': user_record(own, native_id_for,
@@ -382,6 +387,7 @@ def reconnect_response(party, native_id_for, *, policy: PartyDisplayPolicy,
     if leader not in identities:
         raise PartyError('invalid_party_leader')
     return {'party_id': _identifier(party['id']), 'leader_id': leader,
+            'chat_room_jid': chat_room_jid('party', party['id']),
             'game_mode': party['ruleset'] + '_' + party['mode'],
             'party_members': records, 'max_party_size': policy.max_party_size,
             'min_tier': policy.min_tier, 'max_tier': policy.max_tier,

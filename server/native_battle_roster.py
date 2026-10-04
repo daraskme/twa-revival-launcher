@@ -265,6 +265,77 @@ def _seed_bytes(seed: object) -> bytes:
     return value
 
 
+def select_cpu_asset_palette_v3(
+        commanders: (CpuCommander | Mapping[str, object]
+                     | Sequence[CpuCommander | Mapping[str, object]]),
+        units: Sequence[CpuUnit | Mapping[str, object]],
+        seed: str | bytes,
+) -> tuple[tuple[CpuCommander, ...], tuple[CpuUnit, ...]]:
+    """Select a small, seeded CPU asset palette from a trusted full pool.
+
+    The caller remains responsible for supplying its approved non-premium pool.
+    Validate that entire pool before selection, so an invalid omitted row
+    cannot be hidden by the palette. This function creates no seats or digest;
+    the caller passes the result to the unchanged roster builder.
+    """
+    normalized_commanders = _cpu_commanders(commanders)
+    normalized_units = _cpu_units(units, normalized_commanders)
+    seed_hash = hashlib.sha256(_seed_bytes(seed)).digest()
+
+    def rank(domain: bytes, key: str) -> tuple[bytes, str]:
+        encoded_key = key.encode("utf-8")
+        value = hashlib.sha256(
+            b"twa-revival:cpu-asset-palette:v3\0" + domain + b"\0"
+            + seed_hash + len(encoded_key).to_bytes(4, "big") + encoded_key
+        ).digest()
+        return value, key
+
+    commander = min(normalized_commanders,
+                    key=lambda row: rank(b"commander", row.key))
+    compatible_units = (row for row in normalized_units
+                        if row.faction == commander.faction)
+    chosen_units = tuple(sorted(compatible_units,
+                                key=lambda row: rank(b"unit", row.key))
+                         [:UNITS_PER_SEAT])
+    return (commander,), chosen_units
+
+
+def select_cpu_asset_palette_v4(
+        commanders: (CpuCommander | Mapping[str, object]
+                     | Sequence[CpuCommander | Mapping[str, object]]),
+        units: Sequence[CpuUnit | Mapping[str, object]],
+        seed: str | bytes,
+) -> tuple[tuple[CpuCommander, ...], tuple[CpuUnit, ...]]:
+    """Bound one battle to two same-faction commanders and three T10 units.
+
+    The caller supplies the trusted non-premium T10 catalogue. Every commander
+    remains eligible across seeds, while each battle loads a small asset set.
+    Validate the full pool before selecting, as v3 does.
+    """
+    normalized_commanders = _cpu_commanders(commanders)
+    normalized_units = _cpu_units(units, normalized_commanders)
+    seed_hash = hashlib.sha256(_seed_bytes(seed)).digest()
+
+    def rank(domain: bytes, key: str) -> tuple[bytes, str]:
+        encoded_key = key.encode("utf-8")
+        return (hashlib.sha256(
+            b"twa-revival:cpu-asset-palette:v4\0" + domain + b"\0"
+            + seed_hash + len(encoded_key).to_bytes(4, "big") + encoded_key
+        ).digest(), key)
+
+    primary = min(normalized_commanders,
+                  key=lambda row: rank(b"commander", row.key))
+    faction_commanders = sorted(
+        (row for row in normalized_commanders if row.faction == primary.faction),
+        key=lambda row: rank(b"commander", row.key))
+    faction_units = sorted(
+        (row for row in normalized_units if row.faction == primary.faction),
+        key=lambda row: rank(b"unit", row.key))
+    if len(faction_commanders) < 2 or len(faction_units) < UNITS_PER_SEAT:
+        _error("cpu_palette_v4_insufficient_faction_assets")
+    return tuple(faction_commanders[:2]), tuple(faction_units[:UNITS_PER_SEAT])
+
+
 def _digest(data: Mapping[str, Any]) -> str:
     encoded = json.dumps(data, ensure_ascii=True, sort_keys=True,
                          separators=(",", ":")).encode("utf-8")
@@ -279,7 +350,8 @@ def build_battle_roster(*, mode: str, ruleset: str,
                         cpu_unit_pool: Sequence[CpuUnit | Mapping[str, object]],
                         seed: str | bytes, map_key: str | None = None,
                         honor_explicit_teams: bool = False,
-                        allow_one_sided_pvp: bool = False) -> BattleRoster:
+                        allow_one_sided_pvp: bool = False,
+                        independent_cpu_commanders: bool = False) -> BattleRoster:
     """Build a deterministic 20-seat roster for a trusted runtime adapter.
 
     ``battle_id`` is a required bounded lifecycle binding.  It is included in
@@ -307,6 +379,8 @@ def build_battle_roster(*, mode: str, ruleset: str,
     seed_value = _seed_bytes(seed)
     if type(honor_explicit_teams) is not bool:
         _error("invalid_explicit_team_mode")
+    if type(independent_cpu_commanders) is not bool:
+        _error("invalid_cpu_commander_selection")
     if (type(allow_one_sided_pvp) is not bool
             or allow_one_sided_pvp and (mode != 'pvp' or not honor_explicit_teams)):
         _error('invalid_one_sided_pvp_mode')
@@ -379,10 +453,17 @@ def build_battle_roster(*, mode: str, ruleset: str,
         for _ in range(MAX_SEATS_PER_TEAM - len(team_humans)):
             # Choice is server-seeded and deterministic.  The full output is
             # frozen once returned; this function never rerolls on retry.
-            commander = next_commander()
+            # v5 has a separate stream per seat, so one bot's commander and
+            # units cannot consume the random draws of a later bot.
+            seat_rng = (random.Random(int.from_bytes(hashlib.sha256(
+                b"twa-revival:native-battle-roster:v5-seat\0" + rng_seed
+                + len(seats).to_bytes(2, "big")).digest(), "big"))
+                if independent_cpu_commanders else rng)
+            commander = (seat_rng.choice(commanders) if independent_cpu_commanders
+                         else next_commander())
             compatible = tuple(unit for unit in units
                                if unit.faction == commander.faction)
-            selected = tuple(rng.choice(compatible).key
+            selected = tuple(seat_rng.choice(compatible).key
                              for _ in range(UNITS_PER_SEAT))
             seats.append(RosterSeat(-1, team, True, None, None, commander.key,
                                     commander.faction, COMBAT_TIER, selected))

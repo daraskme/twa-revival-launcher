@@ -1,7 +1,7 @@
-"""Pinned native assets for the September player candidate (no credentials).
+"""Pinned native assets for the reviewed 0.2.4 QA candidate (no credentials).
 
-The historical manifest is retained byte-for-byte for launch preflight. This
-module adds a release-side hash boundary; local review receipts are not signatures.
+This module adds a release-side hash boundary for the install manifest and
+reviewed native files; local review receipts are not signatures.
 """
 from __future__ import annotations
 
@@ -13,23 +13,23 @@ import shutil
 from tools.player_package import _regular, _relative
 
 MANIFEST = 'work/native-battle-mode-install.json'
-MANIFEST_HASH = 'c97c9cc1d71d275a167e727ddb30a73fb40c3ad6c897658872fd41fdc933c433'
-GAME_HASH = 'b5d1547b720fd03f1e55e76e2d41b531d2d72e0b4a6270c73223018b8cd45e06'
+MANIFEST_HASH = '747f3c9bf44fe25dcf916d975c7cf9c452c8d1a89ee577a4972282d6fb8be627'
+GAME_HASH = 'b565fe965b33e5aa4e3197bb8710fccac17f83e3c4462cf911043aa7f6c33d01'
 ARENA_HASH = 'f45d6bab7d1ed62451556970ad4f6eb5040d7ea6606f5afd212c81b487e12dc2'
-WAD_HASH = 'b03f4e48a0e4fbf87d3f936945293241ed871a27f8d467cf174a1e4a5cf39efb'
+WAD_HASH = 'c959ade88fa034cd1978449e1765c3ef92077aecaa796ecb6060abb21e0e19f8'
 WAD = 'work/player-native/wad.pack'
 NPL = {
-    'npl-base.dll': '57e21f4bb30309799ff00ce386b82ec2f5fbf6507f381803f5ae56877c5335f8',
-    'npl-sdk.dll': 'e27de46954077a979f4b56568fa13a2f49cd5061026c5868f6262fb68aba3e45',
+    'npl-base.dll': '9ab3d54d9d5f28d1ad1802a621d8e68f6f9f37f10808f8b3586d5949f32c424d',
+    'npl-sdk.dll': '65122308d752e5a39e749737900222e5f5518b48a4a2381f10c1eff2dcc66591',
 }
 # Exact allowed remote files. Executable launcher code never comes from this
-# content channel; these hashes match the existing reviewed native receipts.
+# content channel; the game row points to the reviewed far terrain trial receipt.
 DOWNLOAD_HASHES = {
     MANIFEST: MANIFEST_HASH,
-    'work/private-response-key-20260911/game.dll': GAME_HASH,
-    'work/recent-native-fallback-20260911/receipt.json': 'e02ee57bd3bef4105fe73b06eca14c57232c9a7142fa358729eeb9caaaabcb2d',
-    'work/native_ui_toolchain/fixed20_20260907_04/dui5.fixed20-ja-candidate.pack': '896693d11cd1b79f99df919856f446c95ef85888ee325c698361bae0e76c64c9',
-    'work/native_ui_toolchain/fixed20_20260907_04/receipt-ja.json': '2b99058381762bc10e7da70e0dd60a6847e6b176a96392079b079f4bade36069',
+    'work/qa041-far4096-20261002/game.dll': GAME_HASH,
+    'work/qa041-far4096-20261002/receipt.json': '79119f5eaa0db95a19b2958c543ed73f60997c9b3dd4d97bbaa48590508b31c8',
+    'work/native_ui_toolchain/fixed30_20260907_01/dui5.fixed30-ja-candidate.pack': '3a7916541268a328ba8b4a8f843197883ea0d727dfc07add58513f7ee4c0ca2b',
+    'work/native_ui_toolchain/fixed30_20260907_01/receipt-ja.json': 'b21d5e4c209f75b95ea62011f6813afdbb4beba82fe80f1dbbd46a7e83a17025',
     'work/local_en.native-five-mode-candidate_20260905.pack': 'f1727e367b02231532a61e875de9c6783c4c516e930d768cdc4b7abc0feb5d55',
     'work/local_en.native-five-mode-candidate_20260905.json': 'c1b53466228a3bf7a9ba8f6163c597c739182acf2d57cbf6b65a40ab7c2c5d41',
     'work/local_ja.native-five-mode-candidate_20260905.pack': '57c00e6db4266ae5c96a33c4fddd27e6cb166ecf98072163c029b78a48625104',
@@ -40,13 +40,25 @@ DOWNLOAD_HASHES = {
     **{'npl_stub/' + name: expected for name, expected in NPL.items()},
 }
 # Invariants shared by the current DLL and the older reviewed drag bridge.
+# C4BC60..D94C3D are the drop-target and bar-reorder hook anchors; the bridge
+# rechecks them in memory and installs those two hooks only on an exact match.
 DRAG_ANCHORS = {
     0xDBD7E0: '558bec566a018bf1e8e3c30100ff7508',
     0xDB68C0: '558bec5de9b7d70b00cccccccccccccc',
-    0xDC1138: 'e8d3b2d8ff8b45e8c683df02000001',
     0xC5B4E0: ('558bec83ec0c568bf18b4e1485c97405e89b32faff803d8140b011007424'
                  '6a008d4df4c6058140b01100e8617863ff8b4e18506a01e8d647f9ff8d4d'
                  'f4e87e8f'),
+    0xC4BC60: '558bec81ecbc000000538b5d088bc15657538b48',
+    0xC55F10: '558bec81eccc0000008b450c5356578b780c',
+    0xC55FAB: '8b46088bcb8945fc8d45e050ff760ce8a15cffff',
+    0xD21410: '558bec83ec4053578b7d108bcf',
+    0xD21488: ('8b55f08d4b6c8b42108945f88b45088945f48d45f4508d45dc50e80940ba'
+                 'ff8d5370f30f7e008b40088945f48945cc'),
+    0xD214FB: ('8b45f48d4dd083c008508d45c050e86248dfffff75f88d45d08bcf5053e8'
+                 'f349f3ff'),
+    0xD68D90: '8b75fc8b5df8538d46405057e86f86fbff83c40c',
+    0xC5A7C0: '558bec8b4914e8c5e4f8ff85c074088bc85de9991ffaff5dc20c00',
+    0xD94C3D: '8b4df457ff75fcff75e8e8745becff',
 }
 
 

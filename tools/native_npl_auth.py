@@ -1,8 +1,8 @@
-"""Forward the owned launch's bearer to the two reviewed NPL interop stubs.
+"""Verify owned NPL stubs and support the exact legacy in-memory forwarding.
 
-Only the copied, hash-pinned stub getters are instrumented, in memory. The
-server remains responsible for token validation. No token enters this source
-or the diagnostic messages; it is read inside the already-owned game process.
+New reviewed stubs read the owned launch command line themselves. The legacy
+hook remains restricted to the two original hashes and getter anchors. Neither
+branch publishes a bearer in diagnostics; the server validates it separately.
 """
 from __future__ import annotations
 
@@ -11,6 +11,12 @@ import json
 from pathlib import Path
 
 from companion.launch_preparation import _NPL_STUB_SHA256
+
+
+_LEGACY_NPL_STUB_SHA256 = {
+    'npl-base.dll': '57e21f4bb30309799ff00ce386b82ec2f5fbf6507f381803f5ae56877c5335f8',
+    'npl-sdk.dll': 'e27de46954077a979f4b56568fa13a2f49cd5061026c5868f6262fb68aba3e45',
+}
 
 
 SOURCE = r"""
@@ -67,13 +73,44 @@ SOURCE = r"""
 """
 
 
+DIRECT_SOURCE = r"""
+(() => {
+  if (Process.arch !== 'ia32') throw new Error('npl_auth_arch_mismatch');
+  const paths = __NPL_PATHS__;
+  const commandLine = new NativeFunction(
+    Process.getModuleByName('kernel32.dll').getExportByName('GetCommandLineW'),
+    'pointer', [], 'stdcall')().readUtf16String();
+  const matches = Array.from(commandLine.matchAll(/(?:^|\s)\+auth\s+([a-f0-9]{64})(?=\s|$)/g));
+  const authOptions = Array.from(commandLine.matchAll(/(?:^|\s)\+auth(?:\s|$)/g));
+  if (matches.length !== 1 || authOptions.length !== 1)
+    throw new Error('npl_auth_launch_token_missing');
+  const normalize = value => value.replaceAll('/', '\\').toLowerCase();
+  for (const name of ['npl-base.dll', 'npl-sdk.dll']) {
+    const module = Process.getModuleByName(name);
+    if (normalize(module.path) !== normalize(paths[name]))
+      throw new Error('npl_auth_module_path_mismatch');
+  }
+  // The exact built DLL hashes were checked on the host. No return value or
+  // game memory is changed in this branch, including before helper readiness.
+  send({kind:'npl_auth_ready', mode:'owned_stub_direct'});
+})();
+"""
+
+
 def build_source(root: Path) -> str:
     paths = {}
-    for name, expected in _NPL_STUB_SHA256.items():
+    actual = {}
+    for name in _LEGACY_NPL_STUB_SHA256:
         path = root / 'client' / name
         if path.is_symlink() or not path.is_file():
             raise RuntimeError('npl_auth_stub_missing')
-        if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
-            raise RuntimeError('npl_auth_stub_hash_mismatch')
+        actual[name] = hashlib.sha256(path.read_bytes()).hexdigest()
         paths[name] = str(path.resolve())
-    return SOURCE.replace('__NPL_PATHS__', json.dumps(paths))
+    if actual == _LEGACY_NPL_STUB_SHA256:
+        source = SOURCE
+    elif (_NPL_STUB_SHA256 != _LEGACY_NPL_STUB_SHA256
+          and actual == _NPL_STUB_SHA256):
+        source = DIRECT_SOURCE
+    else:
+        raise RuntimeError('npl_auth_stub_hash_mismatch')
+    return source.replace('__NPL_PATHS__', json.dumps(paths))

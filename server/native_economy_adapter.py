@@ -120,7 +120,7 @@ class NativeEconomyAdapter:
         )
         self.unit_abilities_by_db_key = {
             row["db_key"]: row for row in self.unit_abilities["items"]
-            if row["mode"] == "additional"
+            if row["mode"] in {"additional", "default"}
         }
         self.unit_ability_by_option: dict[str, tuple[str, dict]] = {}
         for row in self.unit_abilities_by_db_key.values():
@@ -701,6 +701,19 @@ class NativeEconomyAdapter:
             ]
         except KeyError as exc:
             raise EconomyError("unknown_deployed_unit_ability") from exc
+
+    def deployed_slot_for_instance(
+        self, instance_id: int,
+    ) -> tuple[str, int] | None:
+        """Return ``(commander, slot)`` for one deployed-slot instance id."""
+        return self._deployed_by_instance.get(instance_id)
+
+    def slot_instance_ids(self, commander_key: str) -> list[int]:
+        """The three deployed-slot instance ids, in saved slot order."""
+        return [
+            require_uint64(self.economy.slot_instances[(commander_key, slot)])
+            for slot in range(3)
+        ]
 
     def _selected_equipment_from_snapshot(self, snapshot: dict) -> list[dict]:
         selected: list[dict] = []
@@ -1630,21 +1643,30 @@ class NativeEconomyAdapter:
         is_retry = operation_id in snapshot["operations"]
         previous_db_key: str | None = None
         selected_db_key: str | None = None
+        binding_pair: tuple[str, str] | None = None
         if len(resolved) == 2:
             (first_action, previous, previous_commander, previous_slot), (
                 second_action, selected, selected_commander, selected_slot,
             ) = resolved
-            if ((first_action, second_action) != ("unequip", "equip")
+            if ((first_action, second_action) not in {
+                        ("unequip", "equip"), ("equip", "equip"),
+                    }
                     or previous["unit"] != selected["unit"]
                     or (previous_commander, previous_slot)
                     != (selected_commander, selected_slot)):
                 raise EconomyError("invalid_unit_ability_swap")
-            self.economy.swap_unit_ability(
-                operation_id, selected["unit"], previous["db_key"],
-                selected["db_key"],
-            )
-            previous_db_key = previous["db_key"]
-            selected_db_key = selected["db_key"]
+            if first_action == "equip":
+                binding_pair = (previous["db_key"], selected["db_key"])
+                self.economy.bind_unit_ability_pair(
+                    operation_id, selected["unit"], binding_pair,
+                )
+            else:
+                self.economy.swap_unit_ability(
+                    operation_id, selected["unit"], previous["db_key"],
+                    selected["db_key"],
+                )
+                previous_db_key = previous["db_key"]
+                selected_db_key = selected["db_key"]
         elif len(resolved) == 1:
             action, selected, _commander_key, _deployed_slot = resolved[0]
             if action == "equip":
@@ -1672,14 +1694,21 @@ class NativeEconomyAdapter:
             return self._authoritative_resync_response(request, profile)
 
         before = self._build_profile_from_snapshot(snapshot)["profile"]
-        response_events = self.unit_ability_delta_events(
-            before,
-            profile,
-            resolved[-1][1]["unit"],
-            previous_db_key=previous_db_key,
-            selected_db_key=selected_db_key,
-            preferred_parent=events[-1]["parent_id"],
-        )
+        if binding_pair is not None:
+            response_events = self.unit_ability_pair_delta_events(
+                before, profile, resolved[-1][1]["unit"],
+                binding_pair=binding_pair,
+                preferred_parent=events[-1]["parent_id"],
+            )
+        else:
+            response_events = self.unit_ability_delta_events(
+                before,
+                profile,
+                resolved[-1][1]["unit"],
+                previous_db_key=previous_db_key,
+                selected_db_key=selected_db_key,
+                preferred_parent=events[-1]["parent_id"],
+            )
         return {
             "result": "ok",
             "saved": profile["saved"],
@@ -1695,25 +1724,10 @@ class NativeEconomyAdapter:
             "properties": copy.deepcopy(profile["properties"]),
         }
 
-    def unit_ability_delta_events(
-        self,
-        before: dict,
-        after: dict,
-        unit_key: str,
-        *,
-        previous_db_key: str | None,
-        selected_db_key: str | None,
-        preferred_parent: int,
-    ) -> list[dict]:
-        """Return the exact bounded type-19 profile delta for one unit.
-
-        This comparison is deliberately over the complete profile records.
-        Removing the affected type-19 rows must leave byte-for-byte equal
-        unrelated records and metadata; a unit-ability operation may not
-        smuggle another profile mutation into an ordinary delta.
-        """
-        if previous_db_key is None and selected_db_key is None:
-            raise EconomyError("invalid_unit_ability_delta")
+    def _unit_ability_delta_rows(
+        self, before: dict, after: dict, unit_key: str, preferred_parent: int,
+    ) -> tuple[dict, dict, dict]:
+        """Validate the complete profile graph before emitting bounded deltas."""
         required = {"saved", "profile_records"}
         if (not isinstance(before, dict) or not isinstance(after, dict)
                 or set(before) != set(after)
@@ -1801,6 +1815,76 @@ class NativeEconomyAdapter:
         after_unrelated, after_rows = split(after)
         if before_unrelated != after_unrelated:
             raise EconomyError("invalid_unit_ability_delta")
+
+        return before_rows, after_rows, affected
+
+    def unit_ability_pair_delta_events(
+        self, before: dict, after: dict, unit_key: str, *,
+        binding_pair: tuple[str, str], preferred_parent: int,
+    ) -> list[dict]:
+        """Acknowledge native Swap's two equips without dropping either row."""
+        if (not isinstance(binding_pair, tuple) or len(binding_pair) != 2
+                or len(set(binding_pair)) != 2):
+            raise EconomyError("invalid_unit_ability_delta")
+        definitions = [self.unit_abilities_by_db_key.get(key) for key in binding_pair]
+        if any(row is None or row["unit"] != unit_key for row in definitions):
+            raise EconomyError("invalid_unit_ability_delta")
+        before_rows, after_rows, affected = self._unit_ability_delta_rows(
+            before, after, unit_key, preferred_parent,
+        )
+        result: list[dict] = []
+        for parent in [preferred_parent, *sorted(p for p in affected if p != preferred_parent)]:
+            expected = dict(before_rows[parent])
+            commander, slot = affected[parent]
+            for key, row in zip(binding_pair, definitions):
+                expected[key] = [
+                    parent, require_uint64(row["item_id"]),
+                    self.deployed_unit_ability_instance_id(commander, slot, key), 1,
+                ]
+            if after_rows[parent] != expected:
+                raise EconomyError("invalid_unit_ability_delta")
+            for key in binding_pair:
+                new = after_rows[parent][key]
+                existed = key in before_rows[parent]
+                if existed and parent != preferred_parent:
+                    continue
+                # Consume both pending bindings on the clicked occurrence in
+                # request order before notifying another deployed occurrence.
+                result.append({
+                    "parent_id": parent, "receiving_instance_id": new[2],
+                    "receiving_quantity": 1, "receiving_item_id": new[1],
+                })
+                if existed:
+                    # Match the existing single-binding pulse: 1 -> 2 -> 1,
+                    # never remove/recreate an already bound native object.
+                    result.append({
+                        "parent_id": parent, "currency_instance_id": new[2],
+                        "currency_quantity": 1, "currency_item_id": new[1],
+                    })
+        return result
+
+    def unit_ability_delta_events(
+        self,
+        before: dict,
+        after: dict,
+        unit_key: str,
+        *,
+        previous_db_key: str | None,
+        selected_db_key: str | None,
+        preferred_parent: int,
+    ) -> list[dict]:
+        """Return the exact bounded type-19 profile delta for one unit.
+
+        This comparison is deliberately over the complete profile records.
+        Removing the affected type-19 rows must leave byte-for-byte equal
+        unrelated records and metadata; a unit-ability operation may not
+        smuggle another profile mutation into an ordinary delta.
+        """
+        if previous_db_key is None and selected_db_key is None:
+            raise EconomyError("invalid_unit_ability_delta")
+        before_rows, after_rows, affected = self._unit_ability_delta_rows(
+            before, after, unit_key, preferred_parent,
+        )
 
         existing_selected_swap = (
             previous_db_key is not None
@@ -2549,8 +2633,12 @@ class NativeEconomyAdapter:
                 operation, commander, levels, expected_saved=receipt["expected_saved"],
             )
             return self._authoritative_resync_response(request, self.build_profile()["profile"])
-        if request["profile_timestamp"] != self.wire_saved(snapshot["saved"]):
-            raise EconomyError("ability_tree_reset_state_changed")
+        # Commander selection can advance the durable profile while the stock
+        # tree still submits its previous watermark. Prove every owned rank
+        # and instance below, then let the atomic economy operation check the
+        # complete rank set against this snapshot. A global watermark mismatch
+        # alone does not mean the displayed tree changed.
+        stale_profile = request["profile_timestamp"] != self.wire_saved(snapshot["saved"])
         self._validate_optional_properties(request, snapshot)
         before = self._build_profile_from_snapshot(snapshot)["profile"]
         commander_instance = require_uint64(self.economy.commanders[commander]["item_id"])
@@ -2567,6 +2655,11 @@ class NativeEconomyAdapter:
         receipt = self.economy.refund_ability_tree(
             operation, commander, levels, expected_saved=snapshot["saved"],
         )
+        if stale_profile:
+            # Unrelated properties may also have changed since the old UI
+            # watermark. Install the authoritative graph instead of applying
+            # additive refund deltas to an older graph.
+            return self._authoritative_resync_response(request, self.build_profile()["profile"])
         increase = receipt["refunded_points"]
         if type(increase) is not int or increase < len(events):
             raise EconomyError("invalid_purchase_receipt")
@@ -2580,9 +2673,9 @@ class NativeEconomyAdapter:
         return {"result": "ok", "saved": self.wire_saved(receipt["saved"]),
                 "events": deltas, "properties": self._response_properties(request)}
 
-    def _consumable_response(
+    def _validate_consumable_purchase(
         self, request: dict, event: dict, snapshot: dict,
-    ) -> dict:
+    ) -> tuple[str, int, dict, int]:
         offer = self.offers.get(event["po"])
         if offer is None:
             raise EconomyError("unknown_purchase_option")
@@ -2614,7 +2707,14 @@ class NativeEconomyAdapter:
             raise EconomyError("invalid_receiving_instance")
         if event["currency_instance_id"] != self.wallet_instance_id(offer["currency"]):
             raise EconomyError("invalid_currency_instance")
+        return commander_key, deployed_slot, row, capacity
 
+    def _consumable_response(
+        self, request: dict, event: dict, snapshot: dict,
+    ) -> dict:
+        commander_key, deployed_slot, row, capacity = (
+            self._validate_consumable_purchase(request, event, snapshot)
+        )
         operation_id = self._loadout_operation_id(
             "consumable", request, [event],
         )
@@ -2657,6 +2757,47 @@ class NativeEconomyAdapter:
             "result": "ok",
             "saved": self.wire_saved(receipt["saved"]),
             "events": response_events,
+            "properties": self._response_properties(request),
+        }
+
+    def _consumable_batch_response(
+        self, request: dict, events: list[dict], snapshot: dict,
+    ) -> dict:
+        """The stock unit replacement re-equips compatible type-11 rows together."""
+        if len({event["parent_id"] for event in events}) != 1:
+            raise EconomyError("invalid_purchase_parent")
+        keys = [self.offers[event["po"]]["consumable_db_key"] for event in events]
+        if len(set(keys)) != len(keys):
+            raise EconomyError("invalid_consumable_batch")
+        operation = self._loadout_operation_id("consumable-batch", request, events)
+        existing = snapshot["operations"].get(operation)
+        if existing is not None:
+            receipt = existing["receipt"]
+            # An additive type-11 delta must never run twice, including after
+            # a restart or a subsequent unit swap. Replay the current graph.
+            self.economy.select_consumables(
+                operation, receipt["commander"], receipt["deployed_slot"], keys,
+                expected_saved=receipt["saved_before"],
+            )
+            return self._authoritative_resync_response(request, self.build_profile()["profile"])
+        validated = [self._validate_consumable_purchase(request, event, snapshot)
+                     for event in events]
+        commander, slot, _row, capacity = validated[0]
+        if len(events) > capacity:
+            raise EconomyError("consumable_slot_unavailable")
+        if request["profile_timestamp"] != self.wire_saved(snapshot["saved"]):
+            raise EconomyError("consumable_state_changed")
+        receipt = self.economy.select_consumables(
+            operation, commander, slot, keys, expected_saved=snapshot["saved"],
+        )
+        return {
+            "result": "ok", "saved": self.wire_saved(receipt["saved"]),
+            "events": [{
+                "parent_id": events[0]["parent_id"],
+                "receiving_instance_id": self.consumable_instance_id(commander, slot, key),
+                "receiving_quantity": 1,
+                "receiving_item_id": require_uint64(self.consumables_by_db_key[key]["item_id"]),
+            } for key in receipt["added"]],
             "properties": self._response_properties(request),
         }
 
@@ -2772,6 +2913,8 @@ class NativeEconomyAdapter:
             return self._commander_tier_response(request, events[0], snapshot)
         if kinds == {"consumable"} and len(events) == 1:
             return self._consumable_response(request, events[0], snapshot)
+        if kinds == {"consumable"}:
+            return self._consumable_batch_response(request, events, snapshot)
         if kinds == {"consumable_refund"} and len(events) == 1:
             return self._consumable_refund_response(
                 request, events[0], snapshot,

@@ -1,70 +1,71 @@
-# TWA Revival launcher — source as distributed (0.2.25)
+# TWA Revival launcher — released source subset (0.2.43)
 
-This repository contains the source code of the **TWA Revival launcher version 0.2.25**,
-exactly as shipped in `TWA-Launcher-0.2.25.zip` (SHA-256 below). It is published so that
-anyone can check what the launcher does before running it.
+This repository publishes **119 source/configuration files from the production
+TWA Revival launcher 0.2.43**, including three bootstrap files, byte-for-byte as
+distributed. The verifier and repository documentation are listed separately.
+Game assets and the
+11 extracted or provenance-unverified catalog files are excluded, along with four
+source files that embed original instruction sequences or game-data mappings. This is a
+source review snapshot, not a complete game or standalone build.
 
-- Versioned download: https://downloads.darask.me/launchers/0.2.25/TWA-Launcher-0.2.25.zip
-- The "latest" download link moves to newer versions, which may differ from this repository.
+- [Versioned launcher download](https://downloads.darask.me/launchers/0.2.43/TWA-Launcher-0.2.43.zip)
+- [Report a bug or review existing issues](https://github.com/daraskme/twa-revival-launcher/issues)
+- The latest download can move to another version; this snapshot is pinned to 0.2.43.
+  Later QA changes are not represented as released here.
 
 TWA Revival is a free, non-commercial, fan-run revival of the shut-down game
-*Total War: Arena*, operated by darask as an individual. It does not accept payments or
-donations. It is **not affiliated with, endorsed by or supported by Creative
-Assembly, SEGA or Epic Games**. Support and questions:
-[twa-revival-support](https://github.com/daraskme/twa-revival-support/issues).
+*Total War: Arena*, operated by darask as an individual. It does not accept payments
+or donations. It is **not affiliated with, endorsed by or supported by Creative
+Assembly, SEGA or Epic Games**.
 
-## What is in this repository
+## What is published
 
-| Path | What it is |
+| Path | Scope |
 |---|---|
-| `companion/`, `server/`, `tools/`, `catalog/`, `NOTICE.txt` | The 126 files covered by the signed launcher update manifest for 0.2.25 |
-| `Launch TWA.cmd`, `tools/player_bootstrap.py`, `config/preferences.template.txt` | The other three code/config files in the ZIP (the entry point and a game-settings template) |
-| `manifests/launcher-stable.json`, `manifests/launcher-beta.json` | The Ed25519-signed update manifests (also served at `https://downloads.darask.me/launcher-manifests/stable.json`) |
-| `manifests/player-core-manifest.json` | SHA-256 and size of 2,085 of the ZIP's 2,087 files (all except this list itself and `player-release.json`). This list is not signed; only the two launcher manifests are. |
-| `verify_release.py` | A self-contained checker you can run yourself (below) |
+| `companion/`, `server/`, `tools/`, `NOTICE.txt` | 116 signed update source files, excluding the three bootstrap files named below |
+| `Launch TWA.cmd`, `tools/player_bootstrap.py`, `config/preferences.template.txt` | Three additional source/configuration files from the release ZIP |
+| `manifests/launcher-stable.json` | Original Ed25519-signed manifest for all 131 launcher update files, including hashes of the 15 omitted files |
+| `manifests/player-core-manifest.json` | Unsigned hash/size list for 2,090 of the ZIP's 2,092 files; it excludes itself and `player-release.json` |
+| `verify_release.py`, `PUBLISHING.md` | Standalone verification and publication boundaries |
 
-Every code file is byte-for-byte identical to the release. Nothing was reformatted.
+The `server/` files are local services shipped inside the launcher, not the hosted
+matchmaking/API backend. That backend is being prepared separately.
 
-**Not in this repository:**
+No game EXE/DLL, model, texture, sound, translation, extracted catalog, bundled
+runtime, credential, or user diagnostic is included. Third-party runtime notices
+are preserved in `NOTICE.txt`. The separately obtained ZIP includes runtime/SDK
+components and `player-release.json`; the verifier never displays its credentials.
 
-- The bundled runtime in the ZIP's `runtime/` folder: CPython 3.11.9, Tcl/Tk,
-  Frida 17.17.0, the Microsoft Visual C++ runtime DLLs and Epic's
-  `EOSSDK-Win64-Shipping.dll` (EOS SDK 1.19.1.2). `NOTICE.txt` lists their licences;
-  their hashes are in `manifests/player-core-manifest.json`.
-- `player-release.json` from the ZIP: the API address and the Epic Online Services product
-  settings, including the client credentials Epic's SDK requires. `verify_release.py`
-  checks its non-secret fields.
-- The game client and the replacement game files the launcher downloads (see below). The
-  modified `game.dll` and the two replacement login DLLs are binaries whose source is not
-  published; the versions installed by 0.2.25 are pinned by SHA-256 in
-  `tools/player_native_payload.py`.
-- The project's server code, tests and development notes. Some comments in this code
-  refer to those files by name.
+Earlier commits contained catalog data. This update removes it from the current
+tree, but does **not** erase Git history or copies in forks. See
+[PUBLISHING.md](PUBLISHING.md) for the exact boundary and repository split.
 
-## Verify it yourself
+## Verify the snapshot
 
-With Python 3.8 or newer (standard library only, no network access needed):
+Use Python 3.8 or newer, standard library only, with no network access:
 
-```
+```sh
 python -I verify_release.py
-python -I verify_release.py --zip path\to\TWA-Launcher-0.2.25.zip
+python -I verify_release.py --zip path/to/TWA-Launcher-0.2.43.zip
 ```
 
-The script never imports or runs code from this repository (`-I` makes sure Python does
-not import anything from this folder). The first command checks that the 129 code files
-here match the release list, that there are no other files, and that both launcher
-manifests carry valid Ed25519 signatures from the release key `2751aa46b0af141c` (the key
-pinned in `companion/trusted_keys.py`) and list exactly these files. The second also checks
-the ZIP: its SHA-256 must equal the value below, it must have no duplicate entries, every
-file must match the release list, and `player-release.json` must contain the published API
-address and EOS identifiers. The signature covers the 126 launcher files; the runtime files
-are checked against the unsigned `player-core-manifest.json`.
+The verifier does not import or run launcher code. It checks the exact published
+file set, the absence of all 15 explicitly excluded files, each source file's size/hash,
+and the complete stable manifest's Ed25519 signature using release key
+`2751aa46b0af141c`. The signed manifest is preserved unchanged; its omitted-data
+records contain paths and hashes, not the game data itself.
 
-This is a consistency check between this repository and the download, not proof that the
-code is harmless. The rest of this page describes what the code does.
+With `--zip`, it also checks the complete archive SHA-256, duplicate entries,
+every listed file, and the non-secret configuration fields. The three bootstrap
+files and runtime hashes are in the unsigned core list, not the launcher signature;
+the pinned ZIP digest provides the full-archive comparison. The beta channel is
+independent and is not represented as a 0.2.43 manifest here.
 
-SHA-256 of `TWA-Launcher-0.2.25.zip`:
-`f06432b45e4321d15cb3f7356ab02c7dcf8525c9052a6b80ba85f669d50b252a`
+SHA-256 of the production `TWA-Launcher-0.2.43.zip`:
+`ff9dd3e96efbd2fbfd0ebf3536d1274c5eac93fd598d61659f4ce35a0ad7622a`
+
+Passing these checks establishes consistency with this release. It does not
+establish runtime correctness or publication rights for excluded materials.
 
 ## What the launcher does
 
@@ -130,9 +131,11 @@ not stored or sent.
     sends it to the project API.
 
   These are the same per-user locations the official game used. When the game exits, the
-  launcher restores the script files and removes the registry value it created; the
-  registry key itself is left in place (`companion/launch_preparation.py`). If the launcher
-  is killed during play, the files and the value can remain.
+  launcher restores session-only bindings, merges supported graphics changes, and removes
+  the registry value it created; the registry key itself is left in place
+  (`companion/launch_preparation.py`). If cleanup fails or the launcher is killed during
+  play, the files and the value can remain. Additional graphics-persistence fixes are
+  under testing and are not included in this 0.2.43 snapshot.
 - Starts `Arena.exe +auth <project session token>`: created suspended, placed in a Windows
   Job object (so it closes with the launcher) and then resumed. While the game runs, the
   session token is visible on Arena's command line to other programs running as the same
@@ -172,7 +175,7 @@ logs stay on your PC in `%LOCALAPPDATA%\TWARevival\Player\diagnostics`; the "Ope
 crash logs folder" button only opens that folder. Like any online service, the API and the
 relay see your IP address.
 
-### 5. Hosts file fix (new in 0.2.25)
+### 5. Hosts file fix
 
 Arena looks up 12 names such as `revival-casag.localhost` through Windows. Windows does not
 answer `*.localhost` names by itself, so on many PCs the game stopped with error 0xf003.
@@ -211,7 +214,7 @@ darask holds, and are checked by SHA-256; unsigned, altered or older files are r
   (CEF) files), plus `data/wad.pack` and 14 terrain packs.
 
 In practice, whoever holds the release key can change anything described on this page,
-and the new code runs with your Windows user rights. This repository shows version 0.2.25
+and the new code runs with your Windows user rights. This repository shows version 0.2.43
 only; checking it does not check later versions.
 
 ### What it does not do
@@ -228,8 +231,11 @@ only; checking it does not check later versions.
   WMI process creation, closing leftover Arena processes) that is not reachable from the
   player launcher. `server/xmpp_stub.py` defaults to listening on all interfaces, but the
   launcher never uses it that way.
-- The `catalog/*.json` files are game data (unit, ability, equipment and map tables) taken
-  from the original game's data files.
+- The released launcher depends on `catalog/*.json` game data. Those files are intentionally
+  excluded here; see [PUBLISHING.md](PUBLISHING.md). This checkout cannot run the game by itself.
+- Version 0.2.43 detects the rendering adapter and manages signed low-memory texture
+  overlays for a confirmed software renderer (`companion/renderer_probe.py`,
+  `companion/texture_memory_compat.py`). The actual texture data is not published here.
 
 ## Licence
 

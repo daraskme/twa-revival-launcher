@@ -266,6 +266,22 @@ def echo_join_payload(packet: bytes) -> bytes:
     return encode_join_payloads([(LOCAL_PLAYER_ID, packet)])
 
 
+def echo_unticked(packet: bytes) -> bytes:
+    """Native kind 6 -> kind 10 for this local one-human transport.
+
+    The cloud relay routes the same recipient mask across authenticated human
+    seats. This local diagnostic transport only owns LOCAL_PLAYER_ID.
+    """
+    if type(packet) is not bytes or not 8 <= len(packet) <= 4003:
+        raise BattleProbeError('unticked_packet_length')
+    kind, total, recipients, channel = struct.unpack_from('<BHIB', packet)
+    if kind != 6 or total != len(packet):
+        raise BattleProbeError('unticked_framing')
+    if not recipients & (1 << LOCAL_PLAYER_ID):
+        return b''
+    return inner_packet(10, bytes((LOCAL_PLAYER_ID, channel)) + packet[8:])
+
+
 def validate_ready_packet(packet: bytes) -> None:
     """Validate BF2FF0's header and native UTF-16-code-unit UTF/CESU-8 body.
 
@@ -765,7 +781,13 @@ class NativeBattleProbe:
                                      pending_payload_bytes=ticks.command_bytes,
                                      command_semantics_verified=False, persisted=False)
                         elif self.enable_ticks and kind == 6:
-                            raise BattleProbeError('unticked_routing_not_supported')
+                            if phase != 'ticking':
+                                raise BattleProbeError('unticked_before_ticking')
+                            outgoing = echo_unticked(packet)
+                            if outgoing:
+                                writer.write(stream_chunk(outgoing))
+                                sent_bytes += len(outgoing)
+                                await writer.drain()
                         elif self.enable_ticks and kind == 7:
                             if (total - 3) % 4:
                                 raise BattleProbeError('checksum_packet_length')
@@ -1054,7 +1076,11 @@ class NativeBattleProbe:
                                      pending_payload_bytes=session.ticks.command_bytes,
                                      command_semantics_verified=False, persisted=False)
                         elif self.enable_ticks and kind == 6:
-                            raise BattleProbeError('unticked_routing_not_supported')
+                            if session.phase != 'ticking':
+                                raise BattleProbeError('unticked_before_ticking')
+                            outgoing = echo_unticked(packet)
+                            if outgoing:
+                                await send_new_stream(outgoing)
                         elif self.enable_ticks and kind == 7:
                             if (total - 3) % 4:
                                 raise BattleProbeError('checksum_packet_length')

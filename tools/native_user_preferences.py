@@ -8,12 +8,14 @@ import hashlib
 import json
 from pathlib import Path
 import re
+from tools.player_native_payload import GAME_HASH
 
 GAME_SHA256='4fc11b6e734042ee0c7d0df54bc5c7f689f2d7842c450e4df541e22310804013'
-GAME_SHA256S=frozenset({GAME_SHA256, '4e622f6934e0ba552b93ef546bec5dacdb0d7ae47d28b0c823959b52fdd08f15', 'f760ece7869a3e254376f927ee610675cab8112fafb502c6c18e90c30664fc0c', '884e30f841d6a1268b7cc918fa2d14b972f007ce593b957fd3d1ee93c75cbf0a', 'b5d1547b720fd03f1e55e76e2d41b531d2d72e0b4a6270c73223018b8cd45e06'})
+GAME_SHA256S=frozenset({GAME_SHA256, '4e622f6934e0ba552b93ef546bec5dacdb0d7ae47d28b0c823959b52fdd08f15', 'f760ece7869a3e254376f927ee610675cab8112fafb502c6c18e90c30664fc0c', '884e30f841d6a1268b7cc918fa2d14b972f007ce593b957fd3d1ee93c75cbf0a', 'b5d1547b720fd03f1e55e76e2d41b531d2d72e0b4a6270c73223018b8cd45e06', GAME_HASH})
 
-def local_storage_url(url: str, user_id: str) -> str | None:
-    if not re.fullmatch(r'[0-9a-f]{32}',user_id):
+def local_storage_url(url: str, user_id: str, *, local_lab: bool = False) -> str | None:
+    if not (re.fullmatch(r'[0-9a-f]{32}',user_id)
+            or (local_lab is True and user_id == 'player')):
         raise ValueError('invalid_native_preference_identity')
     expected=f'https://s3.local.amazonaws.com/revival-user-storage.localhost/{user_id}/blob'
     return f'http://127.0.0.1:18765/{user_id}/blob' if url==expected else None
@@ -46,9 +48,9 @@ SOURCE=r'''
 })();
 '''
 
-def build_source(root:Path,user_id:str)->str:
+def build_source(root:Path,user_id:str, *, local_lab: bool = False)->str:
     expected=f'https://s3.local.amazonaws.com/revival-user-storage.localhost/{user_id}/blob'
-    target=local_storage_url(expected,user_id)
+    target=local_storage_url(expected,user_id,local_lab=local_lab)
     path=root/'client/game.dll'
     if not path.is_file() or path.is_symlink() or hashlib.sha256(path.read_bytes()).hexdigest() not in GAME_SHA256S:
         raise RuntimeError('native_preferences_game_mismatch')
