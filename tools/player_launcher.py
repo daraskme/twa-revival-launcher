@@ -43,6 +43,7 @@ TEXT = {
         "playing": "ゲーム実行中。終了するとこの画面に戻ります。", "finished": "ゲームが終了しました。",
         "ready": "ログイン状態を確認して、次の操作をご案内します。", "ok": "完了しました。",
         "game_launch_failed": "ゲームを起動できませんでした。「更新を確認」を実行し、もう一度ゲームを開始してください。改善しない場合は運営へお知らせください。",
+        "loopback_bind_failed": "ゲームに必要なローカル通信ポートを開けません。他のアプリの使用中、またはWindowsの制限が考えられます。使用中のアプリが分かる場合は終了して再試行し、不明な場合はエラーログを運営へお送りください。",
         "configuration": "配布設定が未完了です。運営に確認してください。",
         "login_required": "ログインが必要です。Epicでログインし直してください。",
         "auth_unavailable": "ログイン状態を確認できませんでした。保存済みログインは保持しています。時間をおいて再試行してください。",
@@ -95,6 +96,7 @@ TEXT = {
         "playing": "Game running. This window will be ready when it exits.", "finished": "Game finished.",
         "ready": "Checking sign-in to show your next step.", "ok": "Completed.",
         "game_launch_failed": "Could not start the game. Check updates and try again. If this continues, contact the operator.",
+        "loopback_bind_failed": "A required local port is unavailable. Another app may be using it, or Windows may have reserved it. Close the conflicting app if you recognize it, then retry. Otherwise, send your error logs to support.",
         "configuration": "The release is not configured. Please contact the operator.",
         "login_required": "Please sign in with Epic again.",
         "auth_unavailable": "Could not verify sign-in. Your saved login has been kept. Please try again shortly.",
@@ -147,6 +149,7 @@ TEXT = {
         "playing": "Игра запущена. После выхода вы вернётесь сюда.", "finished": "Игра завершена.",
         "ready": "Проверяем вход, чтобы показать следующий шаг.", "ok": "Готово.",
         "game_launch_failed": "Не удалось запустить игру. Проверьте обновления и повторите запуск. Если ошибка повторится, обратитесь к оператору.",
+        "loopback_bind_failed": "Нужный локальный порт недоступен: он может использоваться другим приложением или быть зарезервирован Windows. Если вы знаете приложение, закройте его и повторите попытку. Иначе отправьте журналы ошибок оператору.",
         "configuration": "Выпуск не настроен. Обратитесь к оператору.",
         "login_required": "Войдите через Epic ещё раз.",
         "auth_unavailable": "Не удалось проверить вход. Сохранённый вход не удалён. Повторите попытку позже.",
@@ -197,6 +200,31 @@ EOS_LOGIN_OPERATIONS = frozenset(('auth_login', 'auth_token', 'connect_login', '
 def safe_eos_result(code, value):
     return (code in {'eos_' + operation for operation in EOS_LOGIN_OPERATIONS}
             and type(value) is int and 0 <= value <= 2147483647)
+
+
+def safe_loopback_bind(value):
+    if (not isinstance(value, dict)
+            or set(value) != {'transport', 'family', 'port', 'windowsError'}
+            or value.get('transport') not in ('tcp', 'udp')
+            or value.get('family') not in ('ipv4', 'ipv6')
+            or type(value.get('port')) is not int or not 1 <= value['port'] <= 65535):
+        return None
+    number = value['windowsError']
+    if number is not None and (type(number) is not int or not 0 <= number <= 0xffffffff):
+        return None
+    return dict(value)
+
+
+def loopback_failure_message(locale, value):
+    message = TEXT[locale]['loopback_bind_failed']
+    details = safe_loopback_bind(value)
+    if details is None:
+        return message
+    endpoint = '{} {} ({})'.format(details['transport'].upper(), details['port'],
+                                  'IPv4' if details['family'] == 'ipv4' else 'IPv6')
+    if details['windowsError'] is not None:
+        endpoint += ' / Windows: {}'.format(details['windowsError'])
+    return endpoint + '\n' + message
 
 
 def open_runtime_help():
@@ -304,6 +332,10 @@ def run_player_process(action: str, name: str, language: str) -> dict:
                             return {"ok": False, "error": code, "eosResult": payload['eosResult']}
                         if code.startswith('eos_'):
                             return {"ok": False, "error": "auth_unavailable"}
+                        if code == 'loopback_bind_failed':
+                            details = safe_loopback_bind(payload.get('loopbackBind'))
+                            if details is not None:
+                                return {"ok": False, "error": code, "loopbackBind": details}
                         return {"ok": False, "error": code}
     except (OSError, ValueError, subprocess.TimeoutExpired) as error:
         diagnostics().event("process_failed", action, error=error, code="failed", crash=True)
@@ -367,7 +399,8 @@ def worker_main(action: str, language: str) -> int:
         if isinstance(error, EosTimeoutError):
             code = "offline"
         if isinstance(error, NativeLaunchError):
-            code = "game_launch_failed"
+            code = ('loopback_bind_failed' if getattr(error, 'code', None) == 'loopback_bind_failed'
+                    else 'game_launch_failed')
         if not isinstance(code, str):
             code = "failed"
         if code in {"invalid_release_configuration", "invalid_release_origin", "local_state_unavailable"}:
@@ -380,8 +413,20 @@ def worker_main(action: str, language: str) -> int:
                 detail_code = 'eos_' + operation
                 if safe_eos_result(detail_code, native_result):
                     result = {"ok": False, "error": detail_code, "eosResult": native_result}
+        if result['error'] == 'loopback_bind_failed':
+            details = safe_loopback_bind({
+                'transport': getattr(error, 'bind_transport', None),
+                'family': getattr(error, 'bind_family', None),
+                'port': getattr(error, 'bind_port', None),
+                'windowsError': getattr(error, 'windows_error', None),
+            })
+            if details is not None:
+                result['loopbackBind'] = details
+        details = result.get('loopbackBind', {})
         diagnostics().event("operation_failed", action, error=error,
-            code=result["error"], eos_result=result.get("eosResult"), crash=True)
+            code=result["error"], eos_result=result.get("eosResult"), crash=True,
+            bind_transport=details.get('transport'), bind_family=details.get('family'),
+            bind_port=details.get('port'), windows_error=details.get('windowsError'))
     print("TWA_PLAYER_RESULT " + json.dumps(result, ensure_ascii=True), flush=True)
     return 0 if result["ok"] else 1
 
@@ -421,7 +466,7 @@ def _main(*, app=None, locale_override=None) -> int:
     name, account = tk.StringVar(value=load_player_name_draft()), tk.StringVar()
     pending = queue.Queue()
     state = {"busy": False, "language_pending": False, "locale": locale,
-             "eos_result": None,
+             "eos_result": None, "loopback_bind": None,
              "status": "ready", "kind": "notice", "update_notice": args.update_result,
              "initial_account_pending": True, "initial_account": False,
              "after_language_notice": None}
@@ -430,7 +475,9 @@ def _main(*, app=None, locale_override=None) -> int:
     def show(key, kind="notice"):
         state["status"], state["kind"] = key, kind
         message = view.text(key[3:]) if key.startswith("ui:") else text(key)
-        if safe_eos_result(key, state['eos_result']):
+        if key == 'loopback_bind_failed':
+            message = loopback_failure_message(LANGUAGES[language.get()], state['loopback_bind'])
+        elif safe_eos_result(key, state['eos_result']):
             message = message.format(result=state['eos_result'])
         elif key in HOSTS_PATH_NOTICES:
             message = message.format(hosts=hosts_path_text())
@@ -448,6 +495,7 @@ def _main(*, app=None, locale_override=None) -> int:
             return
         state["busy"] = True
         state['eos_result'] = None
+        state['loopback_bind'] = None
         view.set_busy(action)
         show('ui:' + {'login':'signing_in','launch':'running_hint','update':'updating',
                        'account':'checking_account'}.get(action,'checking'))
@@ -592,6 +640,7 @@ def _main(*, app=None, locale_override=None) -> int:
             else:
                 error=result.get("error","failed")
                 state['eos_result'] = result.get('eosResult') if safe_eos_result(error, result.get('eosResult')) else None
+                state['loopback_bind'] = safe_loopback_bind(result.get('loopbackBind')) if error == 'loopback_bind_failed' else None
                 if error in ("login_required","account_disabled"):
                     view.authenticated=False
                     view.refresh_state()

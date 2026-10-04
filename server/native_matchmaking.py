@@ -679,12 +679,35 @@ class NativeMatchmaking:
         self._enrolled_users.clear()
 
     def _expire(self) -> None:
-        # The 180-second deadline bounds queue formation, not a Worker battle
-        # which has already been immutably bound and may run much longer.
-        # Completion/expiry of that battle is driven by the coordinator and
-        # LocalBattleState, then released through complete_battle/abort_pvp.
+        # Unbound queues use QUEUE_SECONDS; binding replaces that deadline
+        # with the Worker battle lifetime. An unbound timeout must also exit
+        # the native waiting screen, even when no coordinator call failed.
         if self._queue is not None and self._now() >= self._queue.expires:
-            self._clear_queue()
+            self._clear_failed_queue()
+
+    def _clear_failed_queue(self) -> None:
+        """Clear under the mutation lock, then end an unbound native wait once."""
+        queue = self._queue
+        pending = (self._is_cloud_queue(queue) and queue.pvp is None
+                   and not queue.battle_id)
+        self._clear_queue()
+        if not pending or self._notify is None:
+            return
+        # A delayed party-cancel receipt must not send a second terminal
+        # state for this same attempt after its failure notification.
+        self._cancel_notified_queue = queue
+        # Keep the lock across delivery: an old failure must never arrive
+        # after a newer Play. Clear first, and fence callback re-entry, so a
+        # failed/uncertain send cannot keep or resurrect the expired queue.
+        try:
+            self._in_callback = True
+            self._notify('failed')
+        except Exception:
+            # XMPP records uncertain delivery and closes that stream. This
+            # terminal send is best effort and must not be blindly repeated.
+            pass
+        finally:
+            self._in_callback = False
 
     def _trusted_squad(self, profile: dict):
         squad = analyze_active_squad(profile, self._native)
@@ -1763,7 +1786,7 @@ class NativeMatchmaking:
             return self.pvp_binding
 
     def abort_pvp(self, reason: str) -> bool:
-        """Drop the current PvP queue (roster timeout, Worker failure)."""
+        """Drop the PvP queue and notify an unbound native matchmaking wait."""
         if not isinstance(reason, str) or not reason:
             raise ValueError('abort reason required')
         with self._lock:
@@ -1771,7 +1794,7 @@ class NativeMatchmaking:
             queue = self._queue
             if queue is None or not self._is_cloud_queue(queue):
                 return False
-            self._clear_queue()
+            self._clear_failed_queue()
             return True
 
     def notify_cancelled_party_queue(self, generation, notify, *, stop,

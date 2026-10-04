@@ -20,6 +20,7 @@ import re
 import select
 import socket
 import ssl
+import sys
 import threading
 import time
 import uuid
@@ -29,6 +30,10 @@ from pathlib import Path
 from typing import Callable
 from xml.sax.saxutils import escape, quoteattr
 
+_SOURCE_ROOT = Path(__file__).resolve().parents[1]
+if str(_SOURCE_ROOT) not in sys.path:
+    sys.path.append(str(_SOURCE_ROOT))
+from companion.loopback_ports import annotate_bind_error
 from f2p_fake import PLAYER, active_native_user_id
 from native_private_cpu_notifications import (
     CpuNotificationDeliveryUncertain,
@@ -318,8 +323,15 @@ class NativeXmppProbe:
                             listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                         if family == socket.AF_INET6:
                             listener.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
-                        listener.bind((host, port))
-                        listener.listen(self.max_clients)
+                        try:
+                            listener.bind((host, port))
+                            listener.listen(self.max_clients)
+                        except OSError as error:
+                            raise annotate_bind_error(
+                                error, transport='tcp',
+                                family='ipv6' if family == socket.AF_INET6 else 'ipv4',
+                                port=port,
+                            )
                         listener.settimeout(0.2)
             except Exception:
                 for listener, _ in pending:

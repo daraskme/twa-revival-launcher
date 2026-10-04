@@ -22,6 +22,7 @@ import argparse
 import asyncio
 import ipaddress
 import json
+import socket
 import struct
 import sys
 import time
@@ -32,6 +33,8 @@ if not __package__:
     # Direct relay startup must still resolve its reviewed sibling modules.
     _SERVER_ROOT = Path(__file__).resolve().parent
     sys.path[:0] = [str(_SERVER_ROOT), str(_SERVER_ROOT.parent)]
+
+from companion.loopback_ports import annotate_bind_error, bind_failure_code
 
 if __package__:
     from .native_relay_probe import (
@@ -1162,7 +1165,23 @@ async def serve(trace: Path, *, enable_join_payload_echo: bool, expected_players
                                   enable_reconnect=enable_reconnect,
                                   drop_transport_at_tick=drop_transport_at_tick)
         trace.parent.mkdir(parents=True, exist_ok=True)
-        server = await asyncio.start_server(probe.handle, '127.0.0.1', RELAY_PORT)
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            if hasattr(socket, 'SO_EXCLUSIVEADDRUSE'):
+                listener.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            try:
+                listener.bind(('127.0.0.1', RELAY_PORT))
+                listener.listen()
+            except OSError as error:
+                annotate_bind_error(error, transport='tcp', family='ipv4', port=RELAY_PORT)
+                probe.log('bind_error', host='127.0.0.1', port=RELAY_PORT,
+                          code=bind_failure_code(error))
+                raise
+            listener.setblocking(False)
+            server = await asyncio.start_server(probe.handle, sock=listener)
+        except BaseException:
+            listener.close()
+            raise
         probe.log('ready', host='127.0.0.1', port=RELAY_PORT,
                   expected_players=(None if battle_state is not None else expected_players),
                   expected_players_source=('battle_state_credentials'

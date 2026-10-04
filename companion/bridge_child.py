@@ -24,6 +24,17 @@ class ChildProtocolError(RuntimeError):
     pass
 
 
+def _loopback_bind_failure(error: BaseException) -> tuple[str, str, int, int | None, str] | None:
+    """Return only validated socket coordinates; never raw exception text."""
+    from .loopback_ports import bind_failure_code, parse_bind_failure_code
+    code = bind_failure_code(error)
+    details = parse_bind_failure_code(code)
+    if details is None:
+        return None
+    return (code, details['bind_family'], details['bind_port'],
+            details['windows_error'], details['bind_transport'])
+
+
 def _read_command() -> dict:
     raw = sys.stdin.buffer.readline(MAX_CONTROL_LINE + 1)
     if not raw or len(raw) > MAX_CONTROL_LINE or not raw.endswith(b"\n"):
@@ -255,12 +266,21 @@ def main() -> int:
             career_history_root=career_history_root,
         ) or 0)
     except BaseException as error:
+        bind_failure = _loopback_bind_failure(error)
         if not isinstance(error, (KeyboardInterrupt, SystemExit)):
-            diagnostic.event("python_unhandled", "bridge_start", error=error, code="failed", crash=True)
+            diagnostic.event(
+                "python_unhandled", "bridge_start", error=error,
+                code="loopback_bind_failed" if bind_failure else "failed", crash=True,
+                bind_family=bind_failure[1] if bind_failure else None,
+                bind_port=bind_failure[2] if bind_failure else None,
+                bind_transport=bind_failure[4] if bind_failure else None,
+                windows_error=bind_failure[3] if bind_failure else None,
+            )
         try:
             _write_record(control_out, write_lock, {
                 "protocol": PROTOCOL, "event": "error",
-                "nonce": command["nonce"], "error": "bridge_start_failed",
+                "nonce": command["nonce"],
+                "error": bind_failure[0] if bind_failure else "bridge_start_failed",
             })
         except (BrokenPipeError, OSError):
             pass

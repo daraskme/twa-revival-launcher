@@ -405,7 +405,11 @@ class NativePartyAdmission:
         with self._lock:
             if self._attempt is None or self._attempt['phase'] not in ACTIVE:
                 return
-            if policy is None or policy['version'] not in (2, 3):
+            # Public assignments now use v5 (independent T10 CPU seats).
+            # Party validation must accept the same reviewed versions as
+            # validated_attempt and the coordinator's frozen roster parser.
+            if (not isinstance(policy, dict) or type(policy.get('version')) is not int
+                    or policy['version'] not in (2, 3, 4, 5)):
                 raise PvpCoordinatorError('party_roster_policy_required')
             members = self._attempt['memberIds']
             admitted = [row for row in rows if row['userId'] in members]
