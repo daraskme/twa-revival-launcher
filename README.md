@@ -201,7 +201,7 @@ not stored or sent.
 | Destination | Why |
 |---|---|
 | `https://downloads.darask.me` | Signed launcher updates, game client updates and install downloads. No account data is sent. |
-| `https://staging-api.darask.me` | The project API (the live service, despite its name): sign-in and session renewal, profile, loadout, matchmaking, rooms, battle results, friends and parties. While you play, the launcher refreshes friends/party state every 5 s and sends your online status (online, matchmaking, in battle, offline) every 15 s. |
+| `https://staging-api.darask.me` | The project API (the live service, despite its name): sign-in and session renewal, profile, loadout, matchmaking, rooms, battle results, friends and parties. While you play, the launcher polls friends/party state with a 2 s wait between cycles and schedules presence heartbeats (online, matchmaking, in battle, offline) about 15 s apart. Requests and network delays can add latency; the players list is not a real-time queue indicator. Loading into a battle is also reported as in battle. |
 | Relay address returned by the API | Outbound WebSocket for multiplayer battle traffic. |
 | Epic Online Services | Contacted by Epic's EOS SDK for sign-in and session renewal (at game start and about hourly while you play). |
 | `learn.microsoft.com` | Opened in your browser only if you click the Visual C++ help button. |
