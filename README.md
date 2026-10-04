@@ -1,5 +1,14 @@
 # TWA Revival launcher
 
+## Project links
+
+- [Project and download guide](https://darask.me/twa/)
+- [Privacy](https://darask.me/twa/privacy/) · [Support guide](https://darask.me/twa/support/)
+- [Discord community](https://discord.gg/w9vnpAJ7ET)
+- [Player support repository](https://github.com/daraskme/twa-revival-support)
+- [Server source](https://github.com/daraskme/twa-revival-server) — separate code review snapshot with synthetic examples
+- [Original/current game-data comparison](https://darask.me/twa/source/)
+
 ## Release and development status
 
 | Track | Version | Status |
@@ -52,7 +61,8 @@ Assembly, SEGA or Epic Games**.
 | `verify_release.py`, `PUBLISHING.md` | Standalone verification and publication boundaries |
 
 The `server/` files are local services shipped inside the launcher, not the hosted
-matchmaking/API backend. That backend is being prepared separately.
+matchmaking/API backend. A separate [server source snapshot](https://github.com/daraskme/twa-revival-server)
+is available for review; it excludes production settings and game-data tables.
 
 No game EXE/DLL, model, texture, sound, translation, extracted catalog, bundled
 runtime, credential, or user diagnostic is included. Third-party runtime notices
