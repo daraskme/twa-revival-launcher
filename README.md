@@ -11,24 +11,31 @@
 
 ## Release and development status
 
+Updated **2026-10-09 JST**. **Production is in maintenance: new sign-ins and
+matchmaking are paused; existing battle relays remain enabled. No reopening date
+is set.** See the [current progress and release checks (日本語 / English / Русский)](https://github.com/daraskme/twa-revival-support/blob/main/STATUS.md).
+
 | Track | Version | Status |
 |---|---|---|
-| Production / this `main` snapshot | 0.2.43 | Released; source and signed manifest can be checked below |
-| [Next source changes](https://github.com/daraskme/twa-revival-launcher/tree/qa/launcher-0.2.48) | 0.2.48 | QA candidate; not a production release |
-| Game payload / native payload | 0.2.5 / 0.2.4 | Unchanged by the 0.2.48 launcher candidate |
+| Public stable / this `main` source snapshot | 0.2.43 | Public manifest rechecked October 9; existing release, currently under maintenance |
+| Last deployed QA launcher | 0.2.63 | Separate test environment; not a production release |
+| Current integrated development candidate | Not released | Build/history analytics and diagnostic fixes; full signed-package acceptance pending |
+| [Earlier public QA source](https://github.com/daraskme/twa-revival-launcher/tree/qa/launcher-0.2.48) | 0.2.48 | Historical work-in-progress snapshot; not the latest internal QA payload |
 
-The next source changes improve port-conflict diagnostics, stop requiring local
-TCP port 80, preserve graphics settings during normal game shutdown, and notify
-the game when a local matchmaking wait expires or is aborted. QA has confirmed
-Apply / normal exit / restart retention for resolution and render scale on an
-RTX 5060 Ti Windows VM. A fresh Windows VM installation has reached the signed-in
-game hangar. Two-player battle and cleanup checks are still in progress. The
-reported black terrain and vegetation issue is not claimed fixed.
+An RTX 5060 Ti 16GB Windows VM completed one normal PvP match using QA0.2.63
+plus a minimal patch: result screens, hangar return and the career increment were
+verified. The integrated candidate passed 315 Windows tests and 1,015 backend
+tests. These are separate checks; they do not establish acceptance of the full
+signed update. Complete equipped-skill capture, all-unit checks, two-client
+results/rematches and the final package/site still need acceptance. The reported
+black terrain/vegetation issue is not claimed fixed by this update.
 
-`main` tracks the latest published, verified source snapshot. Work in progress
-is available on the linked QA branch; it is promoted with the actual signed
-release metadata after validation. A repository update alone does not install
-or deploy a game update. See [PUBLISHING.md](PUBLISHING.md) for the update workflow.
+The linked public 0.2.48 branch preserves earlier port, graphics-retention and
+queue-failure work. It does not contain every later internal change. `main`
+keeps the published 0.2.43 source bytes and original signed manifest unchanged;
+this commit updates documentation only. A repository update alone does not
+install or deploy a game update. See [PUBLISHING.md](PUBLISHING.md) for the
+publication boundary and release workflow.
 
 This repository publishes **119 source/configuration files from the production
 TWA Revival launcher 0.2.43**, including three bootstrap files, byte-for-byte as
@@ -43,7 +50,8 @@ source review snapshot, not a complete game or standalone build.
 - [Player support](https://darask.me/twa/support/) and [privacy information](https://darask.me/twa/privacy/)
 - [General game and account support](https://github.com/daraskme/twa-revival-support/issues/new/choose)
 - The latest download can move to another version; this snapshot is pinned to 0.2.43.
-  The QA branch contains newer source without claiming a production release.
+  The linked QA branch contains an earlier unreleased source snapshot; later
+  internal QA is tracked in the status page above.
 
 TWA Revival is a free, non-commercial, fan-run revival of the shut-down game
 *Total War: Arena*, operated by darask as an individual. It does not accept payments
